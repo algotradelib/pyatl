@@ -16,8 +16,9 @@ from ._backtest import BacktestResult, Replay, backtest
 from ._core import ALGOTRADELIB_VERSION as algotradelib_version
 from ._core import Bar, Context
 
-# The module was named pyatl.backtest before; keep `from pyatl.backtest import ...` and results pickled then working,
-# while the package's `backtest` attribute stays the function.
+# The module was named pyatl.backtest before; keep `from pyatl.backtest import ...` and the module path named in pickles
+# made then resolving, while the package's `backtest` attribute stays the function. A result pickled before a field
+# was added loads without that field.
 _sys.modules[__name__ + ".backtest"] = _backtest
 
 __version__ = _version("pyatl")

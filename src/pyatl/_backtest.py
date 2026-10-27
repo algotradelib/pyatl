@@ -29,7 +29,7 @@ class BacktestResult:
     equity : dict of str to array
         The equity curve: `time` and `equity`, one point per period end.
     opening_equity, closing_equity : str
-        Equity at the first and last point, as exact decimal text.
+        Equity at the first and last point, as exact decimal text; empty when the curve has no point.
     halted : str or None
         Why the replay stopped early, or None.
     total_return, max_drawdown : float
@@ -44,8 +44,9 @@ class BacktestResult:
         Costs over the run, KRW; NaN where the library cannot state a total.
     rejected : dict of str to list
         Targets the runner could not turn into an order: `symbol` and `reason` (the library's name).
-    refused : dict of str to array
-        Orders the risk guard refused: `symbol`, `reason` (the library's name), and the `limit` exceeded and
+    refused : dict of str to list or array
+        Orders the risk guard refused: `symbol` and `reason` (lists; the reason is the library's name), and, as
+        arrays, the `limit` exceeded and
         the value `attempted`, in the reason's own unit (shares for `quantity_not_sellable`), NaN where the
         reason has none.
     unfilled : int

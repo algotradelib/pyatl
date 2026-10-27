@@ -65,7 +65,7 @@ def test_the_old_module_path_still_imports_and_unpickles():
     frame = pd.DataFrame({"open": [1.0, 2.0], "high": [1.0, 2.0], "low": [1.0, 2.0], "close": [1.0, 2.0],
                           "volume": [1.0, 1.0]}, index=pd.date_range("2024-01-01", periods=2))
     result = pyatl.backtest(Hold(), {"005930": frame})
-    # A result pickled when the class lived in pyatl.backtest names that module.
+    # A pickle names the class's module; one made when the class lived in pyatl.backtest names that path.
     old = pickle.dumps(result, protocol=0).replace(b"pyatl._backtest", b"pyatl.backtest")
     assert b"pyatl.backtest\n" in old
     loaded = pickle.loads(old)

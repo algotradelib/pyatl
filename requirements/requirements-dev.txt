@@ -1,3 +1,4 @@
 # Building, testing and documenting pyatl: the build prerequisites, then the package's own extras.
+# Run from the repository root: the "." below is the current directory.
 -r requirements.txt
 -e .[dev]
