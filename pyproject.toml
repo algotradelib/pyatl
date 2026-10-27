@@ -13,12 +13,53 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
+authors = [
+    { name = "Young Geun Kim" }
+]
+keywords = [
+    "backtesting",
+    "algorithmic trading",
+    "quantitative finance"
+]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Intended Audience :: Science/Research",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: C++",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Topic :: Office/Business :: Financial :: Investment"
+]
 dependencies = ["numpy>=1.26"]
+
+[project.urls]
+Homepage = "https://algotradelib.github.io/python/"
+Source = "https://github.com/algotradelib/pyatl"
+Issues = "https://github.com/algotradelib/pyatl/issues"
+algotradelib = "https://github.com/algotradelib/algotradelib"
 
 [project.optional-dependencies]
 test = [
     "pytest>=8",
+    "pandas>=2.2",
+    "polars>=1.0"
+]
+doc = [
+    "quartodoc>=0.11",
+    # quartodoc 0.11 passes an option griffe 2 no longer takes.
+    "griffe<2",
+    "jupyter",
     "pandas>=2.2"
+]
+dev = [
+    "pyatl[test,doc]"
 ]
 
 [tool.scikit-build]

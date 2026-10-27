@@ -1,0 +1,17 @@
+# conda-forge environment for building and testing pyatl; the library itself is installed separately (see the
+# README). OpenSSL is here because the library's CMake package asks for it at configure time.
+name: pyatl-env
+channels:
+  - conda-forge
+dependencies:
+  - python>=3.12
+  - cmake>=3.18
+  - ninja
+  - openssl>=3
+  - scikit-build-core>=0.11
+  - nanobind>=2.9
+  - numpy>=1.26
+  - pandas>=2.2
+  - polars>=1.0
+  - pytest>=8
+  - pip
