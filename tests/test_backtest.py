@@ -154,3 +154,117 @@ def test_a_dict_of_arrays_with_a_time_column_works():
 def test_unknown_interval_lists_the_known_ones():
     with pytest.raises(ValueError, match="1m, 1d"):
         pyatl.backtest(TargetAt(0, 1), {"005930": frame([1])}, interval="2d")
+
+
+def bars(opens, closes=None, start="2024-01-01"):
+    closes = opens if closes is None else closes
+    opens, closes = np.asarray(opens, dtype=float), np.asarray(closes, dtype=float)
+    return pd.DataFrame(
+        {"open": opens, "high": np.maximum(opens, closes), "low": np.minimum(opens, closes), "close": closes,
+         "volume": np.full(len(opens), 1000.0)},
+        index=pd.date_range(start, periods=len(opens), freq="D"),
+    )
+
+
+def test_sale_tax_is_reported_per_fill_and_in_total():
+    result = pyatl.backtest(TargetAt(on=0, off=1, quantity=100), {"005930": bars([12000] * 4)}, sell_tax=0.002)
+    assert list(result.fills["side"]) == ["buy", "sell"]
+    assert list(result.fills["tax"]) == [0, pytest.approx(0.002 * 100 * 12000)]
+    assert result.tax_paid == pytest.approx(0.002 * 100 * 12000)
+
+
+def test_slippage_is_per_share_one_tick_and_already_in_the_price():
+    # 12,000 KRW sits inside KRX's 10 KRW tick band (5,000 to 20,000), away from a band edge.
+    result = pyatl.backtest(TargetAt(on=0, off=1, quantity=100), {"005930": bars([12000] * 4)}, slippage_ticks=1)
+    assert list(result.fills["price"]) == [12010, 11990]
+    assert list(result.fills["slippage"]) == [10, 10]
+    assert result.slippage_paid == pytest.approx(10 * 100 * 2)
+
+
+def test_commission_paid_is_the_sum_of_the_fills():
+    result = pyatl.backtest(TargetAt(on=0, off=2, quantity=100), {"005930": bars([12000, 12100, 12200, 12300])},
+                            commission=0.00015)
+    assert result.commission_paid == pytest.approx(float(np.sum(result.fills["commission"])))
+
+
+def test_a_sale_of_shares_not_held_is_refused_with_the_library_reason():
+    class Short:
+        def __init__(self):
+            self.n = 0
+
+        def on_bar(self, ctx, bar):
+            if self.n == 0:
+                ctx.target(bar.symbol, -5)
+            self.n += 1
+
+    result = pyatl.backtest(Short(), {"005930": bars([100] * 3)})
+    assert result.refused["symbol"] == ["005930"]
+    assert result.refused["reason"] == ["quantity_not_sellable"]
+    assert math.isnan(result.refused["limit"][0]) and math.isnan(result.refused["attempted"][0])
+    assert result.rejected == {"symbol": [], "reason": []}
+    assert len(result.fills["time"]) == 0
+
+
+def test_a_target_on_the_last_bar_is_left_unfilled():
+    result = pyatl.backtest(TargetAt(on=2, off=99, quantity=1), {"005930": bars([100] * 3)})
+    assert result.unfilled == 1
+    assert len(result.fills["time"]) == 0
+
+
+def test_cash_below_zero_is_reported():
+    result = pyatl.backtest(TargetAt(on=0, off=99, quantity=1000), {"005930": bars([100] * 3)}, cash=1000)
+    assert result.lowest_cash == pytest.approx(1000 - 1000 * 100)
+
+
+def test_an_unvalued_bar_is_counted_and_has_no_equity_point():
+    # Cash near the exact decimal's maximum: two shares marked at 1,000,000 make a total that does not fit.
+    data = {"005930": bars([70000] * 4, [70000, 70000, 70000, 1_000_000])}
+    result = pyatl.backtest(TargetAt(on=0, off=99, quantity=2), data, cash="9223372036854000000", scale=0)
+    assert result.halted is None
+    assert result.bars == 4
+    assert result.unvalued_bars == 1
+    assert len(result.equity["equity"]) == 3
+
+
+def test_sortino_and_turnover_come_from_the_library():
+    closes = [12000, 12500, 11800, 12300, 11900, 12600]
+    result = pyatl.backtest(TargetAt(on=0, off=4, quantity=100), {"005930": bars(closes)})
+    assert math.isfinite(result.sortino)
+    assert result.turnover > 0
+    assert result.gaps == 0 and result.unvalued_bars == 0 and math.isnan(result.lowest_cash)
+
+
+def test_costs_are_reported_even_with_no_equity_point():
+    # One bar each; the order fills on 000660's bar of the same period, whose equity does not fit an exact decimal.
+    def one_bar(close):
+        return dict(time=np.array(["2024-01-01"], dtype="datetime64[D]"), open=[70000], high=[max(70000, close)],
+                    low=[min(70000, close)], close=[close], volume=[1000])
+
+    class Cross:
+        def on_bar(self, ctx, bar):
+            if bar.symbol == "005930":
+                ctx.target("000660", 2)
+
+    result = pyatl.backtest(Cross(), {"005930": one_bar(70000), "000660": one_bar(1_000_000)},
+                            cash="9223372036854000000", scale=0, commission="0.001", slippage_ticks=1)
+    assert len(result.equity["equity"]) == 0 and result.unvalued_bars == 1
+    assert len(result.fills["time"]) == 1
+    assert result.commission_paid == pytest.approx(float(result.fills["commission"][0]))
+    assert result.tax_paid == 0
+    assert result.slippage_paid == pytest.approx(float(result.fills["slippage"][0]) * 2)
+
+
+def test_a_target_the_runner_cannot_plan_is_rejected_with_the_library_reason():
+    # Holding 1, a target of -2**63 makes a difference no exact decimal holds.
+    class Overflow:
+        def __init__(self):
+            self.n = 0
+
+        def on_bar(self, ctx, bar):
+            ctx.target(bar.symbol, 1 if self.n == 0 else -(2**63))
+            self.n += 1
+
+    result = pyatl.backtest(Overflow(), {"005930": bars([1] * 3)}, scale=0)
+    # One rejection for each callback after the first (the 2nd and 3rd bars).
+    assert result.rejected == {"symbol": ["005930", "005930"], "reason": ["not_representable", "not_representable"]}
+    assert result.halted is None
