@@ -12,7 +12,19 @@ using namespace nb::literals;
 void pyatl::bind_types(nb::module_& m) {
   nb::class_<Bar>(m, "Bar",
                   "One bar, as a strategy handler receives it.\n\n"
-                  "The replay reuses bar objects from call to call: keep the numbers, not the object.\n")
+                  "The replay reuses bar objects from call to call: keep the numbers, not the object.\n\n"
+                  "Attributes\n"
+                  "----------\n"
+                  "symbol : str\n"
+                  "    The symbol the bar is for.\n"
+                  "time : int\n"
+                  "    The period end, ns since the epoch (UTC).\n"
+                  "open : float\n"
+                  "    The open price; NaN when the source has no open.\n"
+                  "high, low, close : float\n"
+                  "    The high, low and close prices.\n"
+                  "volume : float\n"
+                  "    The volume traded.\n")
     .def_ro("symbol", &Bar::symbol, "The symbol the bar is for.")
     .def_ro("time", &Bar::time, "The period end, ns since the epoch (UTC).")
     .def_ro("open", &Bar::open, "The open price; NaN when the source has no open.")
@@ -27,7 +39,11 @@ void pyatl::bind_types(nb::module_& m) {
   nb::class_<Context>(m, "Context",
                       "The running replay, as a strategy handler sees it.\n\n"
                       "Valid only inside the handler call that received it; afterwards every method raises\n"
-                      "RuntimeError.\n")
+                      "RuntimeError.\n\n"
+                      "Attributes\n"
+                      "----------\n"
+                      "now : int\n"
+                      "    The replay's clock: the end of the period being handled, ns since the epoch (UTC).\n")
     .def_prop_ro("now", &Context::now, "The replay's clock: the end of the period being handled, ns since the epoch (UTC).")
     .def("target", &Context::target, "symbol"_a, "quantity"_a,
          "Hold a number of shares of a symbol.\n\n"

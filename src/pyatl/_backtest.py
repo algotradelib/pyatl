@@ -135,6 +135,11 @@ class Replay:
     scale : int
         Decimal places kept when prices and volumes are converted to exact decimals.
 
+    Attributes
+    ----------
+    symbols : tuple of str
+        The symbols the replay may receive, in the order that breaks ties.
+
     Notes
     -----
     Every feed is checked whole before its first bar reaches the engine: each symbol's bars must come later
