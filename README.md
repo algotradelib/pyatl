@@ -13,7 +13,7 @@ class Hold:
 
 frame = pd.read_csv("bars.csv", parse_dates=["time"])
 result = pyatl.backtest(Hold(), {"005930": frame}, commission=0.00015, sell_tax=0.002)
-print(result.closing_equity, result.total_return)
+print(result.closing_equity, result.total_return, result.max_drawdown)
 ```
 
 ## Install
@@ -22,10 +22,11 @@ pyatl needs an installed algotradelib; see [its install guide](https://github.co
 Then:
 
 ```sh
-pip install .
+pip install git+https://github.com/algotradelib/pyatl.git
 ```
 
 If algotradelib is installed under a prefix CMake does not search, set `CMAKE_PREFIX_PATH` to that prefix.
+`pyatl.algotradelib_version` tells which library version a build was made against.
 
 ## Writing a strategy
 
@@ -64,6 +65,11 @@ result = replay.finish()
 `feed(data)` takes the same `{symbol: bars}` as `backtest()`.
 Each feed is checked before any of it runs: a symbol's bars must move forward in time, and no bar may end before the bar fed before it.
 The bars still run through the C++ engine one at a time, so feeding in blocks costs no more than one `backtest()` call.
+
+## The result
+
+`BacktestResult` holds the fills (with commission, sale tax and slippage), the equity curve, the library's summary (total return, Sharpe, Sortino, maximum drawdown, turnover, costs paid), and what did not go as asked: refused orders with the library's reason, orders left unfilled, gaps, bars whose equity could not be valued, and the lowest cash if it went below zero.
+The fills and the equity curve are columns (NumPy arrays, and lists for the symbol and side), so any other measure is a few lines of NumPy or pandas away.
 
 ## Status
 
