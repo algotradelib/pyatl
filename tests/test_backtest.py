@@ -268,3 +268,33 @@ def test_a_target_the_runner_cannot_plan_is_rejected_with_the_library_reason():
     # One rejection for each callback after the first (the 2nd and 3rd bars).
     assert result.rejected == {"symbol": ["005930", "005930"], "reason": ["not_representable", "not_representable"]}
     assert result.halted is None
+
+
+def test_a_polars_frame_works_and_its_time_zone_is_read_as_utc():
+    pl = pytest.importorskip("polars")
+
+    class Times:
+        def __init__(self):
+            self.times = []
+
+        def on_bar(self, ctx, bar):
+            self.times.append(bar.time)
+
+    prices = {"open": [1.0, 2.0], "high": [1.0, 2.0], "low": [1.0, 2.0], "close": [1.0, 2.0], "volume": [1.0, 1.0]}
+    naive = pl.DataFrame({"time": pl.datetime_range(pl.datetime(2024, 1, 1), pl.datetime(2024, 1, 2), "1d", eager=True),
+                          **prices})
+    seoul = naive.with_columns(pl.col("time").dt.replace_time_zone("Asia/Seoul"))
+    plain, zoned = Times(), Times()
+    assert pyatl.backtest(plain, {"005930": naive}, stamp="close").bars == 2
+    assert pyatl.backtest(zoned, {"005930": seoul}, stamp="close").bars == 2
+    assert np.datetime64(plain.times[0], "ns") == np.datetime64("2024-01-01T00:00", "ns")
+    assert np.datetime64(zoned.times[0], "ns") == np.datetime64("2023-12-31T15:00", "ns")  # 00:00 KST in UTC
+
+
+def test_a_replay_finished_without_bars_has_empty_equity_text():
+    class Nothing:
+        def on_bar(self, ctx, bar):
+            pass
+
+    result = pyatl.Replay(Nothing(), ["005930"]).finish()
+    assert result.bars == 0 and result.opening_equity == "" and result.closing_equity == ""
