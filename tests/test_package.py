@@ -26,8 +26,10 @@ def test_every_public_name_is_documented(name):
     assert doc.strip(), name
     if name in ("backtest", "Replay"):
         assert "Parameters\n----------" in doc, name
-    if name == "BacktestResult":
-        assert "Attributes\n----------" in doc
+    if name in ("BacktestResult", "Replay", "Bar", "Context"):
+        # A class with attributes documents them in its own section; quartodoc otherwise links a summary table
+        # to attribute sections it does not render.
+        assert "Attributes\n----------" in doc, name
 
 
 @pytest.mark.parametrize("cls, members", [
