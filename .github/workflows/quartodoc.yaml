@@ -1,0 +1,59 @@
+# Renders the quartodoc site (docs/build.sh) and, from main, deploys it into algotradelib.github.io/python.
+# The deploy never force-pushes: the Hugo site and the library's Doxygen pages deploy to the same repository, so after
+# a concurrent deploy this one rebases and retries, and fails on a conflict, instead of overwriting it. Pull requests
+# render only.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+name: quartodoc
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quartodoc-${{ github.event_name == 'pull_request' && github.run_id || 'deploy' }}
+  cancel-in-progress: false
+
+jobs:
+  quartodoc:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - uses: algotradelib/.github/actions/setup-atl@main
+
+      - name: OpenSSL
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install ".[doc]" -v
+
+      - uses: quarto-dev/quarto-actions/setup@v2
+
+      - name: Render
+        run: docs/build.sh
+
+      - name: Deploy to algotradelib.github.io/python
+        if: github.event_name != 'pull_request' && github.ref_name == 'main' && !github.event.repository.fork
+        uses: JamesIves/github-pages-deploy-action@v4.9.0
+        with:
+          token: ${{ secrets.ALGOTRADELIB_PAGE_PAT }}
+          repository-name: algotradelib/algotradelib.github.io
+          branch: main
+          folder: docs/_site
+          target-folder: python
+          clean: true
+          force: false

@@ -1,0 +1,64 @@
+# Coverage of pyatl's Python (pytest-cov) and of its own C++ (gcov over include/pyatl and src/bindings), to Codecov.
+# Pull requests measure but upload nothing: the token is never in a job that runs pull-request code.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+name: py-test-coverage
+
+permissions:
+  contents: read
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - uses: algotradelib/.github/actions/setup-atl@main
+
+      - name: OpenSSL
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev
+
+      - name: Install, instrumented
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements/requirements.txt pytest-cov gcovr
+          pip install -e ".[test]" -v --no-build-isolation -Cbuild-dir=build/coverage \
+            -Ccmake.build-type=Debug \
+            -Ccmake.define.CMAKE_CXX_FLAGS=--coverage \
+            -Ccmake.define.CMAKE_MODULE_LINKER_FLAGS=--coverage \
+            -Ccmake.define.CMAKE_SHARED_LINKER_FLAGS=--coverage
+
+      - name: Test
+        run: python -m pytest --cov=pyatl --cov-report=xml:coverage-python.xml
+
+      - name: C++ coverage
+        run: |
+          gcovr --root . --filter include/pyatl/ --filter src/bindings/ --cobertura coverage-cpp.xml --print-summary build/coverage
+
+      - uses: codecov/codecov-action@v7
+        if: github.event_name != 'pull_request'
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage-python.xml
+          disable_search: true
+          flags: python
+          fail_ci_if_error: true
+
+      - uses: codecov/codecov-action@v7
+        if: github.event_name != 'pull_request'
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage-cpp.xml
+          disable_search: true
+          flags: cpp
+          fail_ci_if_error: true
