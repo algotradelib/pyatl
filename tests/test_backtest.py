@@ -298,3 +298,69 @@ def test_a_replay_finished_without_bars_has_empty_equity_text():
 
     result = pyatl.Replay(Nothing(), ["005930"]).finish()
     assert result.bars == 0 and result.opening_equity == "" and result.closing_equity == ""
+
+
+def test_the_library_period_returns_are_what_its_sharpe_uses():
+    closes = [12000, 12500, 11800, 12300, 11900, 12600, 12100]
+    result = pyatl.backtest(TargetAt(on=0, off=5, quantity=100), {"005930": bars(closes)})
+    returns = result.equity["period_return"]
+    assert len(returns) == len(result.equity["equity"])
+    assert math.isnan(returns[0]) and np.isfinite(returns[1:]).all()
+    valid = returns[~np.isnan(returns)]
+    assert valid.mean() / valid.std(ddof=1) == pytest.approx(result.sharpe, rel=1e-12)
+
+
+def test_the_return_after_an_unvalued_bar_is_missing():
+    closes = [70000, 70000, 70000, 1_000_000, 70000]
+    data = {"005930": bars([70000] * 5, closes)}
+    result = pyatl.backtest(TargetAt(on=0, off=99, quantity=2), data, cash="9223372036854000000", scale=0)
+    assert result.unvalued_bars == 1
+    returns = result.equity["period_return"]
+    assert len(returns) == 4  # five bars, one unvalued
+    assert math.isnan(returns[0]) and math.isnan(returns[3])  # the point after the unvalued bar has none
+
+
+def test_bars_ending_with_negative_cash_are_counted():
+    result = pyatl.backtest(TargetAt(on=0, off=99, quantity=1000), {"005930": bars([100] * 4)}, cash=1000)
+    assert result.overdrawn_bars > 0
+    assert result.aborted == 0
+
+
+def test_fills_on_close_stamped_weekly_bars_are_counted_as_unchecked():
+    weekly = bars([100, 101, 102, 103])
+    weekly.index = pd.date_range("2024-01-05", periods=4, freq="W-FRI")
+    weekly_result = pyatl.backtest(TargetAt(on=0, off=99, quantity=1), {"005930": weekly}, interval="1w", stamp="close")
+    daily_result = pyatl.backtest(TargetAt(on=0, off=99, quantity=1), {"005930": bars([100, 101, 102, 103])})
+    assert len(weekly_result.fills["time"]) == 1 and weekly_result.unchecked_fill_causality == 1
+    assert len(daily_result.fills["time"]) == 1 and daily_result.unchecked_fill_causality == 0
+
+
+def test_equity_at_or_below_zero_before_the_end_leaves_no_sharpe():
+    # 1,000 shares bought on 1,000 KRW of cash: a fall to 1 KRW takes equity below zero, a recovery brings it back.
+    data = {"005930": bars([100, 100, 1, 100, 100])}
+    result = pyatl.backtest(TargetAt(on=0, off=99, quantity=1000), data, cash=1000, scale=0)
+    equity, returns = result.equity["equity"], result.equity["period_return"]
+    below = np.flatnonzero(equity <= 0)
+    assert below.size and below[0] + 1 < len(returns)
+    assert math.isnan(returns[below[0] + 1])  # no return after a point at or below zero
+    assert math.isnan(result.sharpe) and math.isnan(result.sortino)
+    valid = returns[~np.isnan(returns)]
+    assert math.isfinite(valid.mean() / valid.std(ddof=1))  # the remaining returns would give a ratio; the library gives none
+
+
+def test_orders_cleared_by_a_halt_are_counted_as_aborted():
+    # Cash at the exact decimal's minimum: the first buy cannot be booked, the replay halts, the other order is cleared.
+    class Both:
+        def __init__(self):
+            self.n = 0
+
+        def on_bars(self, ctx, bars):
+            if self.n == 0:
+                for bar in bars:
+                    ctx.target(bar.symbol, 1)
+            self.n += 1
+
+    data = {"005930": bars([100] * 3), "000660": bars([100] * 3)}
+    result = pyatl.backtest(Both(), data, cash="-9223372036854775807", scale=0)
+    assert result.halted is not None
+    assert result.aborted == 1 and result.unfilled == 0
