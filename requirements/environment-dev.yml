@@ -1,0 +1,21 @@
+# environment.yml plus what the documentation needs.
+name: pyatl-dev
+channels:
+  - conda-forge
+dependencies:
+  - python>=3.12
+  - cmake>=3.18
+  - ninja
+  - openssl>=3
+  - scikit-build-core>=0.11
+  - nanobind>=2.9
+  - numpy>=1.26
+  - pandas>=2.2
+  - polars>=1.0
+  - pytest>=8
+  - pytest-cov
+  - jupyter
+  - pip
+  - pip:
+      - quartodoc>=0.11
+      - griffe<2

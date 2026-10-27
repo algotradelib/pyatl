@@ -29,6 +29,13 @@ nanobind_add_module(_core STABLE_ABI NB_STATIC LTO
 # The extension's own headers: compiled into it, never installed.
 target_include_directories(_core PRIVATE include)
 target_link_libraries(_core PRIVATE algotradelib::algotradelib)
+# The library's target brings OpenSSL, Boost.JSON and (with some toolchains) OpenMP onto the link line for its broker
+# sessions; a backtest uses none of them. Linking only what is used leaves the extension depending on system
+# libraries alone, so a wheel needs nothing bundled. MSVC already records a DLL only when its symbols are used.
+target_link_options(_core PRIVATE
+    $<$<PLATFORM_ID:Darwin>:LINKER:-dead_strip_dylibs>
+    $<$<PLATFORM_ID:Linux>:LINKER:--as-needed>
+)
 install(TARGETS _core LIBRARY DESTINATION pyatl)
 
 # Type stubs for _core, so editors know Bar and Context.

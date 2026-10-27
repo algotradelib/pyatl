@@ -1,0 +1,3 @@
+# Building, testing and documenting pyatl: the build prerequisites, then the package's own extras.
+-r requirements.txt
+-e .[dev]

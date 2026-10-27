@@ -1,0 +1,4 @@
+# Building and running pyatl. The library itself is installed separately (see the README).
+scikit-build-core>=0.11
+nanobind>=2.9
+numpy>=1.26

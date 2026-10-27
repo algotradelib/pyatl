@@ -32,17 +32,22 @@ class BacktestResult:
         Equity at the first and last point, as exact decimal text.
     halted : str or None
         Why the replay stopped early, or None.
-    total_return, sharpe, annualized_sharpe, max_drawdown, sortino : float
-        The library's summary of the equity curve.
+    total_return, max_drawdown : float
+        The return over the run and the largest fall from a peak, as fractions (0.05 is 5 %).
+    sharpe, sortino : float
+        Per period of the equity curve (one bar's interval), not annualized.
+    annualized_sharpe : float
+        `sharpe` scaled to a year of KRX trading days.
     turnover : float
-        One-way turnover over the run: the fraction of equity traded.
+        Everything traded (buys and sells, quantity x price) divided by the opening equity, over the whole run.
     commission_paid, tax_paid, slippage_paid : float
         Costs over the run, KRW; NaN where the library cannot state a total.
     rejected : dict of str to list
         Targets the runner could not turn into an order: `symbol` and `reason` (the library's name).
     refused : dict of str to array
         Orders the risk guard refused: `symbol`, `reason` (the library's name), and the `limit` exceeded and
-        the value `attempted`, NaN where the reason has none.
+        the value `attempted`, in the reason's own unit (shares for `quantity_not_sellable`), NaN where the
+        reason has none.
     unfilled : int
         Orders still waiting when the replay ended.
     gaps : int
@@ -53,7 +58,8 @@ class BacktestResult:
         return computed between two exported points would span the missing bar. Check it is 0 before
         computing measures from `equity` per period.
     lowest_cash : float
-        The lowest cash an execution left, if cash went below zero; NaN otherwise.
+        The lowest cash (KRW) an execution left, if an execution took cash below zero; NaN otherwise, which
+        includes a run that started below zero and executed nothing.
     """
 
     bars: int
