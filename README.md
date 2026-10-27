@@ -16,6 +16,8 @@ result = pyatl.backtest(Hold(), {"005930": frame}, commission=0.00015, sell_tax=
 print(result.closing_equity, result.total_return, result.max_drawdown)
 ```
 
+Documentation: <https://algotradelib.github.io/python/>.
+
 ## Install
 
 pyatl needs an installed algotradelib; see [its install guide](https://github.com/algotradelib/algotradelib#install).
