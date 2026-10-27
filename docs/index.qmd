@@ -27,7 +27,7 @@ print(result.closing_equity, result.total_return, result.max_drawdown)
 
 ## Install
 
-pyatl needs an installed algotradelib; see [its install guide](https://github.com/algotradelib/algotradelib#install).
+pyatl needs Python 3.12 or newer and an installed algotradelib; see [its install guide](https://github.com/algotradelib/algotradelib#install).
 Then:
 
 ```sh
@@ -35,6 +35,7 @@ pip install git+https://github.com/algotradelib/pyatl.git
 ```
 
 If algotradelib is installed under a prefix CMake does not search, set `CMAKE_PREFIX_PATH` to that prefix.
+NumPy is its only Python dependency; the examples read data with pandas, installed separately (`pip install pandas`).
 
 ## Where to go next
 

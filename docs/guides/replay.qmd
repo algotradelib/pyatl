@@ -4,7 +4,8 @@ title: "Defining the replay sequence"
 
 `backtest()` replays history as it happened.
 To test a strategy on other sequences (windows of the history, or paths resampled from it), feed a `Replay` yourself.
-The bars still run through the C++ engine one at a time, so feeding in blocks costs about the same as one `backtest()` call; parallel runs belong in separate processes.
+The bars still run through the C++ engine one at a time; in our measurements, feeding a sequence in blocks took no longer than one `backtest()` call over the same bars.
+Parallel runs belong in separate processes.
 
 ```{python}
 import numpy as np
