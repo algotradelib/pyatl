@@ -11,7 +11,7 @@ A strategy is any object with `on_bar(ctx, bar)` or `on_bars(ctx, bars)`; it nee
 from importlib.metadata import version as _version
 
 from ._core import Bar, Context
-from .backtest import BacktestResult, backtest
+from .backtest import BacktestResult, Replay, backtest
 
 __version__ = _version("pyatl")
-__all__ = ["Bar", "Context", "BacktestResult", "backtest", "__version__"]
+__all__ = ["Bar", "Context", "BacktestResult", "Replay", "backtest", "__version__"]

@@ -25,11 +25,6 @@ inline std::int64_t to_ns(std::chrono::system_clock::time_point at) {
   return std::chrono::duration_cast<std::chrono::nanoseconds>(at.time_since_epoch()).count();
 }
 
-inline std::chrono::system_clock::time_point from_ns(std::int64_t ns) {
-  return std::chrono::system_clock::time_point{
-    std::chrono::duration_cast<std::chrono::system_clock::duration>(std::chrono::nanoseconds(ns))};
-}
-
 inline double to_double(const atl::Decimal64& value) { return atl::analytics::to_scalar(value); }
 
 /** One bar as doubles. `time` is the period end, ns since the epoch (UTC). */

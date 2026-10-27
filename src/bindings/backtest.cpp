@@ -1,5 +1,4 @@
-// run_backtest: picks the adapter for the Python strategy, replays, and returns the result as a dict.
-// The only binding file that compiles the engine.
+// Replay: one run, fed from Python, finished into a dict. The only binding file that compiles the engine.
 #include "bindings.hpp"
 
 #include <pyatl/backtest.hpp>
@@ -14,6 +13,10 @@ using namespace nb::literals;
 
 namespace pyatl {
 namespace {
+
+using Indices = nb::ndarray<const std::int64_t, nb::ndim<1>, nb::c_contig, nb::device::cpu>;
+using Times = nb::ndarray<const std::int64_t, nb::ndim<1>, nb::c_contig, nb::device::cpu>;
+using Values = nb::ndarray<const double, nb::ndim<1>, nb::c_contig, nb::device::cpu>;
 
 nb::dict to_dict(Result r) {
   auto array = [](auto values) {
@@ -46,30 +49,62 @@ nb::dict to_dict(Result r) {
   return d;
 }
 
-nb::dict run_backtest(nb::object strategy, const std::vector<Series>& series, const Settings& settings) {
-  std::unordered_map<std::string, atl::InstrumentId> ids;
-  for (const auto& s : series) {
-    if (!ids.emplace(s.symbol, instrument_of(s.symbol)).second) throw std::invalid_argument("symbol given twice: " + s.symbol);
-    if (s.interval != series.front().interval) throw std::invalid_argument("every series must have the same interval");
+void feed_bars(Replay& replay, Indices symbol, Times time, Values open, Values high, Values low, Values close,
+               Values volume, int scale) {
+  const auto n = time.shape(0);
+  if (symbol.shape(0) != n) throw std::invalid_argument("symbol must have as many rows as time");
+  for (const auto* column : {&open, &high, &low, &close, &volume}) {
+    if (column->shape(0) != n) throw std::invalid_argument("every column must have as many rows as time");
   }
-  if (nb::hasattr(strategy, "on_start")) {
-    // The library's replay never calls on_start; a setup step that silently never runs is worse than none.
-    throw nb::type_error("on_start is not called by algotradelib's replay; do the setup in __init__");
+  const auto s = checked_scale(scale);
+  const auto count = static_cast<std::int64_t>(replay.symbol_count());
+  Block block;
+  block.symbol.reserve(n);
+  block.bars.reserve(n);
+  block.ends.reserve(n);
+  for (std::size_t i = 0; i < n; ++i) {
+    if (symbol(i) < 0 || symbol(i) >= count) {
+      throw std::invalid_argument("symbol index " + std::to_string(symbol(i)) + " at row " + std::to_string(i) +
+                                  " is not one of the replay's " + std::to_string(count) + " symbols");
+    }
+    block.symbol.push_back(static_cast<std::size_t>(symbol(i)));
+    block.bars.push_back(bar_of(time(i), open(i), high(i), low(i), close(i), volume(i), s, i));
+    block.ends.push_back(atl::strategy::bar_period_end(block.bars.back(), replay.interval(), replay.stamp()));
   }
-  Handlers handlers(strategy, ids, atl::Currency{"KRW"});
-  const bool bar = !handlers.on_bar.is_none(), bars = !handlers.on_bars.is_none();
-  if (bar == bars) {
-    throw nb::type_error(bar ? "a strategy defines on_bar or on_bars, not both: on_bar receives each bar, "
-                               "on_bars every instrument's bar for a period at once"
-                             : "a strategy must define on_bar(ctx, bar) or on_bars(ctx, bars)");
-  }
-  Result result = bar ? replay(PyOnBar{{&handlers}}, series, settings) : replay(PyOnBars{{&handlers}}, series, settings);
-  return to_dict(std::move(result));
+  replay.feed_block(block);
 }
+
+// The garbage collector's view of a replay: the Python objects its handlers keep (the strategy's bound methods),
+// so a cycle through a strategy that keeps its replay can be collected (nanobind's reference-leak guide).
+int replay_traverse(PyObject* self, visitproc visit, void* arg) {
+  Py_VISIT(Py_TYPE(self));
+  if (!nb::inst_ready(self)) return 0;
+  return nb::inst_ptr<Replay>(self)->traverse([&](PyObject* object) {
+    Py_VISIT(object);
+    return 0;
+  });
+}
+
+int replay_clear(PyObject* self) {
+  if (nb::inst_ready(self)) nb::inst_ptr<Replay>(self)->clear();
+  return 0;
+}
+
+PyType_Slot replay_slots[] = {
+  {Py_tp_traverse, reinterpret_cast<void*>(replay_traverse)},
+  {Py_tp_clear, reinterpret_cast<void*>(replay_clear)},
+  {0, nullptr},
+};
 
 } // namespace
 } // namespace pyatl
 
 void pyatl::bind_backtest(nb::module_& m) {
-  m.def("run_backtest", &run_backtest, "strategy"_a, "series"_a, "settings"_a);
+  nb::class_<Replay>(m, "Replay", nb::type_slots(replay_slots))
+    .def(nb::init<nb::handle, const std::vector<std::string>&, const Settings&, const std::string&, const std::string&>(),
+         "strategy"_a, "symbols"_a, "settings"_a, "interval"_a, "stamp"_a)
+    .def_prop_ro("symbols", &Replay::symbols)
+    .def("feed_series", &Replay::feed_series, "series"_a)
+    .def("feed_bars", &feed_bars, "symbol"_a, "time"_a, "open"_a, "high"_a, "low"_a, "close"_a, "volume"_a, "scale"_a)
+    .def("finish", [](Replay& replay) { return to_dict(replay.finish()); });
 }
