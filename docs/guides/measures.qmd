@@ -1,0 +1,63 @@
+---
+title: "Measures of your own"
+---
+
+`BacktestResult` reports the library's figures, and carries the fills and the equity curve as NumPy columns, so any other measure is computed from them.
+
+```{python}
+import numpy as np
+import pandas as pd
+import pyatl
+
+rng = np.random.default_rng(1)
+days = pd.bdate_range("2024-01-02", periods=500)
+close = np.round(20_000 * np.exp(np.cumsum(rng.normal(0.0002, 0.012, len(days)))), -1)
+frame = pd.DataFrame(
+    {"open": close, "high": close, "low": close, "close": close, "volume": 1e6}, index=days
+)
+
+
+class Momentum:
+    def __init__(self):
+        self.closes = []
+
+    def on_bar(self, ctx, bar):
+        self.closes.append(bar.close)
+        if len(self.closes) > 20:
+            ctx.target(bar.symbol, 200 if bar.close > self.closes[-21] else 0)
+
+
+result = pyatl.backtest(
+    Momentum(), {"005930": frame}, commission=0.00015, sell_tax=0.002
+)
+```
+
+## The library's figures, recomputed
+
+Total return and drawdown come out the same from the exported curve.
+Sharpe agrees to about four significant digits: the library computes each period's return exactly from decimal equity and rounds it to eight places, while the exported curve is floating point.
+
+```{python}
+equity = result.equity["equity"]
+returns = equity[1:] / equity[:-1] - 1
+peak = np.maximum.accumulate(equity)
+print(f"total return  library {result.total_return:.10f}  numpy {equity[-1] / equity[0] - 1:.10f}")
+print(f"max drawdown  library {result.max_drawdown:.10f}  numpy {((peak - equity) / peak).max():.10f}")
+print(f"sharpe        library {result.sharpe:.10f}  numpy {returns.mean() / returns.std(ddof=1):.10f}")
+```
+
+Check `result.unvalued_bars == 0` first: a bar whose equity could not be valued has no point in the curve, and a return computed between two exported points would span it.
+
+## Measures the library does not report
+
+```{python}
+years = (result.equity["time"][-1] - result.equity["time"][0]) / (365.25 * 86400e9)
+cagr = (equity[-1] / equity[0]) ** (1 / years) - 1
+var_95 = -np.quantile(returns, 0.05)
+fills = pd.DataFrame(result.fills)
+trades = fills.groupby("side")["quantity"].sum()
+print(f"CAGR {cagr:.2%}, one-day VaR(95%) {var_95:.2%}")
+print(f"shares bought {trades.get('buy', 0):.0f}")
+```
+
+Costs per fill are columns too: `commission`, `tax` (KRW) and `slippage` (the price per share given up, already in `price`).

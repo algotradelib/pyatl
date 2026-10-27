@@ -90,7 +90,8 @@ class Replay:
 
     `backtest()` is a `Replay` fed once. Use a `Replay` when the sequence of bars is yours to define: a
     resampled path, a rolling window, bars generated as the run goes. The bars still run through the C++
-    engine one at a time, so feeding in blocks costs no more than one `backtest()` call.
+    engine one at a time; in our measurements, feeding a sequence in blocks took no longer than one
+    `backtest()` call over the same bars.
 
     Parameters
     ----------
@@ -253,8 +254,23 @@ def backtest(
         (optional), `high`, `low`, `close`, `volume`, and the time as a `time` column or a pandas
         DatetimeIndex. The time must be datetime64 (naive is read as UTC); integers are refused rather than
         guessed (`pd.to_datetime(df.ts, unit="s")`).
-    interval, stamp, cash, commission, min_commission, sell_tax, slippage_ticks, scale
-        As for `Replay`.
+    interval : str
+        The bars' interval, as the library names it ("1m", "5m", "15m", "30m", "1h", "1d", "1w", "1mo",
+        "1y").
+    stamp : str
+        "open" if a bar's time is its period's start, "close" if its end.
+    cash : int, str or Decimal
+        Starting cash, KRW.
+    commission : float, str or Decimal
+        Commission rate on every fill (0.00015 is 0.015 %).
+    min_commission : int, str or Decimal
+        Minimum commission per fill, KRW.
+    sell_tax : float, str or Decimal
+        Securities transaction tax rate on sales.
+    slippage_ticks : int
+        Price ticks against the order on each fill.
+    scale : int
+        Decimal places kept when prices and volumes are converted to exact decimals.
 
     Returns
     -------

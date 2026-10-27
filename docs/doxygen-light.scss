@@ -1,0 +1,18 @@
+// The library's Doxygen pages (HTML_COLORSTYLE AUTO_LIGHT, hue 220): their light palette and fonts.
+/*-- scss:defaults --*/
+$body-bg: #FFFFFF;
+$body-color: #000000;
+$primary: #3D578C;
+$link-color: #3D578C;
+$navbar-bg: #F9FAFC;
+$navbar-fg: #283A5D;
+$navbar-hl: #3D578C;
+$footer-bg: #F9FAFC;
+$footer-fg: #2A3D61;
+$code-block-bg: #FBFCFD;
+$code-block-border-color: #C4CFE5;
+$font-family-sans-serif: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", sans-serif;
+$font-family-monospace: "JetBrains Mono", Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace;
+/*-- scss:rules --*/
+.navbar { border-bottom: 1px solid #C4CFE5; }
+.navbar-brand img { max-height: 55px; }

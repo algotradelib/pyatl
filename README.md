@@ -16,9 +16,11 @@ result = pyatl.backtest(Hold(), {"005930": frame}, commission=0.00015, sell_tax=
 print(result.closing_equity, result.total_return, result.max_drawdown)
 ```
 
+Documentation: <https://algotradelib.github.io/python/>.
+
 ## Install
 
-pyatl needs an installed algotradelib; see [its install guide](https://github.com/algotradelib/algotradelib#install).
+pyatl needs Python 3.12 or newer and an installed algotradelib; see [its install guide](https://github.com/algotradelib/algotradelib#install).
 Then:
 
 ```sh
@@ -27,6 +29,7 @@ pip install git+https://github.com/algotradelib/pyatl.git
 
 If algotradelib is installed under a prefix CMake does not search, set `CMAKE_PREFIX_PATH` to that prefix.
 `pyatl.algotradelib_version` tells which library version a build was made against.
+NumPy is its only Python dependency; the examples read data with pandas, installed separately (`pip install pandas`).
 
 ## Writing a strategy
 
@@ -64,7 +67,7 @@ result = replay.finish()
 
 `feed(data)` takes the same `{symbol: bars}` as `backtest()`.
 Each feed is checked before any of it runs: a symbol's bars must move forward in time, and no bar may end before the bar fed before it.
-The bars still run through the C++ engine one at a time, so feeding in blocks costs no more than one `backtest()` call.
+The bars still run through the C++ engine one at a time; in our measurements, feeding a sequence in blocks took no longer than one `backtest()` call over the same bars.
 
 ## The result
 

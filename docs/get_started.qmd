@@ -1,0 +1,83 @@
+---
+title: "Get started"
+---
+
+## A first backtest
+
+A strategy is any object with `on_bar(ctx, bar)` (one bar at a time) or `on_bars(ctx, bars)` (every symbol's bar for a period at once), and optionally `on_stop(ctx)`.
+`ctx.target(symbol, quantity)` states how many shares to hold; the order fills at the next bar's open.
+
+```{python}
+import numpy as np
+import pandas as pd
+import pyatl
+
+rng = np.random.default_rng(7)
+days = pd.bdate_range("2024-01-02", periods=250)
+close = np.round(50_000 * np.exp(np.cumsum(rng.normal(0, 0.01, len(days)))), -2)
+frame = pd.DataFrame(
+    {"open": close, "high": close, "low": close, "close": close, "volume": 1_000_000.0},
+    index=days,
+)
+
+
+class Crossover:
+    """Holds 100 shares while the 5-day mean is above the 20-day mean."""
+
+    def __init__(self, fast=5, slow=20):
+        self.fast, self.slow, self.closes = fast, slow, []
+
+    def on_bar(self, ctx, bar):
+        self.closes.append(bar.close)
+        if len(self.closes) < self.slow:
+            return
+        fast = sum(self.closes[-self.fast:]) / self.fast
+        slow = sum(self.closes[-self.slow:]) / self.slow
+        ctx.target(bar.symbol, 100 if fast > slow else 0)
+
+
+result = pyatl.backtest(
+    Crossover(), {"005930": frame}, commission=0.00015, sell_tax=0.002
+)
+print(f"{result.bars} bars, {len(result.fills['time'])} fills")
+print(f"equity {result.opening_equity} -> {result.closing_equity}")
+print(f"total return {result.total_return:.2%}")
+```
+
+Keep the state a strategy needs in plain Python (lists, running sums); a window recomputed with pandas on every bar costs more than the replay itself.
+
+## The result
+
+`fills` and `equity` are dicts of NumPy columns, so a table is one call away.
+
+```{python}
+pd.DataFrame(result.fills).head()
+```
+
+The summary holds the library's figures and what did not go as asked:
+
+```{python}
+print(f"Sharpe {result.sharpe:.3f}, Sortino {result.sortino:.3f}")
+print(f"max drawdown {result.max_drawdown:.2%}, turnover {result.turnover:.2f}")
+print(f"commission {result.commission_paid:,.0f} KRW, tax {result.tax_paid:,.0f} KRW")
+print(f"refused {len(result.refused['symbol'])}, unfilled {result.unfilled}")
+print(f"unvalued bars {result.unvalued_bars}")
+```
+
+## A replay you feed yourself
+
+`backtest()` replays the bars you give it in time order.
+A `Replay` takes them in as many calls as you like, in the order you define, and is finished once.
+
+```{python}
+replay = pyatl.Replay(
+    Crossover(), ["005930"], commission=0.00015, sell_tax=0.002
+)
+for quarter in np.array_split(np.arange(len(frame)), 4):
+    replay.feed({"005930": frame.iloc[quarter]})
+same = replay.finish()
+print(same.closing_equity == result.closing_equity)
+```
+
+`feed_bars` takes one long block (a symbol, a time and the prices per row), which is the fastest way to feed a sequence you generate.
+Each feed is checked before any of it runs: a symbol's bars must move forward in time, and no bar may end before the bar fed before it.
