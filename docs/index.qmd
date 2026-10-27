@@ -35,12 +35,13 @@ pip install git+https://github.com/algotradelib/pyatl.git
 ```
 
 If algotradelib is installed under a prefix CMake does not search, set `CMAKE_PREFIX_PATH` to that prefix.
+`pyatl.algotradelib_version` tells which library version a build was made against.
 NumPy is its only Python dependency; the examples read data with pandas, installed separately (`pip install pandas`).
 
 ## Where to go next
 
 - [Get started](get_started.qmd): a first backtest, its result, and a replay you feed yourself.
-- [Reference](reference/index.qmd): every public name.
+- [Reference](reference/index.qmd): the functions and classes.
 - [Defining the replay sequence](guides/replay.qmd): rolling windows and resampled paths.
 - [Measures of your own](guides/measures.qmd): computing what the result does not report.
 - [algotradelib's documentation](https://algotradelib.github.io/docs/): the C++ library underneath.
