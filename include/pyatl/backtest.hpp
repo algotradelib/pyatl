@@ -27,13 +27,21 @@ struct Result {
   std::size_t bars{0};
   std::vector<std::int64_t> fill_time;
   std::vector<std::string> fill_symbol, fill_side;
-  std::vector<double> fill_quantity, fill_price, fill_commission;
+  std::vector<double> fill_quantity, fill_price, fill_commission, fill_tax, fill_slippage;
   std::vector<std::int64_t> equity_time;
   std::vector<double> equity;
   std::string opening_equity, closing_equity;
   std::optional<std::string> halted;
   double total_return{NAN}, sharpe{NAN}, annualized_sharpe{NAN}, max_drawdown{NAN};
+  double sortino{NAN}, turnover{NAN}, commission_paid{NAN}, tax_paid{NAN}, slippage_paid{NAN};
+  std::vector<std::string> rejected_symbol, rejected_reason;
+  std::vector<std::string> refused_symbol, refused_reason;
+  std::vector<double> refused_limit, refused_attempted;
+  std::size_t unfilled{0}, gaps{0}, unvalued_bars{0};
+  double lowest_cash{NAN};
 };
+
+inline double to_double_or_nan(const std::optional<atl::Decimal64>& value) { return value ? to_double(*value) : NAN; }
 
 /** Bars in the order they are to be fed, converted and checked before the first one is. */
 struct Block {
@@ -55,21 +63,44 @@ Result result_of(const Engine& engine, atl::BarInterval interval) {
     out.fill_quantity.push_back(to_double(fill.quantity_));
     out.fill_price.push_back(to_double(fill.price_));
     out.fill_commission.push_back(to_double(execution.commission_));
+    out.fill_tax.push_back(to_double(execution.tax_));
+    out.fill_slippage.push_back(to_double(execution.slippage_));
   }
+  for (const auto& rejection : result.rejected_) {
+    out.rejected_symbol.push_back(rejection.instrument_.symbol_);
+    out.rejected_reason.emplace_back(atl::strategy::reject_reason_name(rejection.reason_));
+  }
+  for (const auto& refusal : result.refused_) {
+    out.refused_symbol.push_back(refusal.instrument_.symbol_);
+    out.refused_reason.emplace_back(atl::strategy::guard_reason_name(refusal.reason_));
+    out.refused_limit.push_back(to_double_or_nan(refusal.limit_));
+    out.refused_attempted.push_back(to_double_or_nan(refusal.attempted_));
+  }
+  out.unfilled = result.unfilled_;
+  out.gaps = result.gaps_;
+  out.unvalued_bars = result.unvalued_bars_;
+  if (result.lowest_cash_) out.lowest_cash = to_double(result.lowest_cash_->amount_);
   for (const auto& point : result.equity_) {
     out.equity_time.push_back(to_ns(point.at_));
     out.equity.push_back(to_double(point.equity_));
   }
   if (result.halted_) out.halted = result.halted_->message_;
+  // The costs are known from the executions alone, so they are read even when no equity point could be valued;
+  // the figures of the curve only when it has a point.
+  const auto periods = atl::backtest::periods_per_year(interval, market::session(), market::trading_days);
+  const auto report = atl::backtest::summarize(result, engine.fills(), periods);
+  out.commission_paid = to_double_or_nan(report.commission_paid_);
+  out.tax_paid = to_double_or_nan(report.tax_paid_);
+  out.slippage_paid = to_double_or_nan(report.slippage_paid_);
   if (!result.equity_.empty()) {
-    const auto periods = atl::backtest::periods_per_year(interval, market::session(), market::trading_days);
-    const auto report = atl::backtest::summarize(result, engine.fills(), periods);
     out.opening_equity = report.opening_equity_.str();
     out.closing_equity = report.closing_equity_.str();
     out.total_return = report.total_return_;
     out.sharpe = report.sharpe_;
     out.annualized_sharpe = report.annualized_sharpe_;
     out.max_drawdown = report.max_drawdown_;
+    out.sortino = report.sortino_;
+    out.turnover = report.total_turnover_;
   }
   return out;
 }
