@@ -1,0 +1,119 @@
+---
+title: "Defining the replay sequence"
+---
+
+`backtest()` replays history as it happened.
+To test a strategy on other sequences (windows of the history, or paths resampled from it), feed a `Replay` yourself.
+The bars still run through the C++ engine one at a time, so feeding in blocks costs about the same as one `backtest()` call; parallel runs belong in separate processes.
+
+```{python}
+import numpy as np
+import pandas as pd
+import pyatl
+
+rng = np.random.default_rng(11)
+days = pd.bdate_range("2023-01-02", periods=500)
+symbols = ["005930", "000660", "035420"]
+returns = rng.normal(0, 0.012, (len(days), len(symbols)))
+closes = np.round(30_000 * np.exp(np.cumsum(returns, axis=0)), -1)
+data = {}
+for i, s in enumerate(symbols):
+    c = closes[:, i]
+    data[s] = pd.DataFrame(
+        {"open": c, "high": c, "low": c, "close": c, "volume": 1e6}, index=days
+    )
+
+
+class Reversal:
+    """Each day, holds 1,000,000 KRW of the symbol that fell most."""
+
+    def __init__(self):
+        self.prev, self.held = {}, None
+
+    def on_bars(self, ctx, bars):
+        moves = []
+        for bar in bars:
+            if bar.symbol in self.prev:
+                change = bar.close / self.prev[bar.symbol] - 1
+                moves.append((change, bar.symbol, bar.close))
+            self.prev[bar.symbol] = bar.close
+        if not moves:
+            return
+        _, pick, price = min(moves)
+        if self.held and self.held != pick:
+            ctx.target(self.held, 0)
+        ctx.target(pick, int(1_000_000 // price))
+        self.held = pick
+```
+
+## Rolling windows
+
+Each window is its own run: a new strategy and a new `Replay` (one replay is one run and has no reset).
+
+```{python}
+rows = []
+for start in range(0, 500 - 120 + 1, 60):
+    window = {s: f.iloc[start:start + 120] for s, f in data.items()}
+    result = pyatl.backtest(Reversal(), window)
+    rows.append((window[symbols[0]].index[0].date(), result.total_return, result.sharpe))
+pd.DataFrame(rows, columns=["start", "total_return", "sharpe"])
+```
+
+## A block bootstrap of the history
+
+Resampling draws blocks of days and joins them into a new path.
+Two rules keep the path valid:
+
+- **Draw days, not symbols**, so every symbol's bars in a block come from the same days and the cross-section keeps its correlation.
+  The helper below draws positions, so every frame must share the same dates in the same order (align real data to a common date index first); it checks this.
+- **Give the path its own timeline.** Drawn blocks come out of order and may repeat, while a replay needs time to move forward; the path's bars are placed on new consecutive business days, and gaps and calendars then follow that timeline.
+
+Prices are rebuilt from the drawn daily returns, so blocks join without jumps.
+
+```{python}
+def bootstrap_path(data, block, rng):
+    days = next(iter(data.values())).index
+    assert all(f.index.equals(days) for f in data.values()), "align every frame to the same dates"
+    n = len(days)
+    ratio = {s: (f["close"] / f["close"].shift(1)).to_numpy()[1:] for s, f in data.items()}
+    # n prices give n - 1 daily ratios; a block may start at any ratio from 0 to n - 1 - block.
+    starts = rng.integers(0, n - block, size=(n - 1) // block)
+    picked = np.concatenate([np.arange(a, a + block) for a in starts])
+    timeline = pd.bdate_range("2030-01-01", periods=len(picked) + 1)
+    path = {}
+    for s, f in data.items():
+        close = f["close"].iloc[0] * np.concatenate([[1.0], np.cumprod(ratio[s][picked])])
+        close = np.round(close, -1)
+        path[s] = pd.DataFrame(
+            {"open": close, "high": close, "low": close, "close": close, "volume": 1e6},
+            index=timeline,
+        )
+    return path
+
+
+rng = np.random.default_rng(3)
+sharpes = [
+    pyatl.backtest(Reversal(), bootstrap_path(data, 20, rng)).sharpe for _ in range(50)
+]
+low, mid, high = np.quantile(sharpes, [0.05, 0.5, 0.95])
+print(f"Sharpe over 50 paths: median {mid:.3f}, 5% {low:.3f}, 95% {high:.3f}")
+```
+
+## Feeding a generated sequence in blocks
+
+When a path is generated as the run goes, `feed_bars` takes each block as columns, in the order you want them replayed.
+
+```{python}
+replay = pyatl.Replay(Reversal(), symbols)
+path = bootstrap_path(data, 20, np.random.default_rng(5))
+table = pd.concat(path, names=["symbol", "time"]).reset_index()
+table["order"] = table["symbol"].map(symbols.index)  # ties follow the replay's symbols
+table = table.sort_values(["time", "order"])
+for _, block in table.groupby(table["time"].dt.to_period("M")):
+    replay.feed_bars(
+        block["symbol"].to_numpy(), block["time"].to_numpy(),
+        open=block["open"], high=block["high"], low=block["low"],
+        close=block["close"], volume=block["volume"],
+    )
+print(replay.finish().closing_equity)
+```

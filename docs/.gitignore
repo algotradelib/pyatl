@@ -1,0 +1,9 @@
+/.quarto/
+_site/
+_api/
+_variables.yml
+objects.json
+reference/
+*.quarto_ipynb
+
+**/*.quarto_ipynb

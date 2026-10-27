@@ -1,0 +1,67 @@
+project:
+  type: website
+  output-dir: _site
+
+website:
+  title: "pyatl"
+  description: "Python strategies on algotradelib's C++ backtest"
+  favicon: favicon.ico
+  site-url: https://algotradelib.github.io/python/
+  repo-url: https://github.com/algotradelib/pyatl
+  page-navigation: true
+  page-footer:
+    left: "pyatl, part of [algotradelib](https://github.com/algotradelib)"
+    right: "Built with [quartodoc](https://machow.github.io/quartodoc/) {{< var version >}}"
+  navbar:
+    pinned: true
+    logo: logo.png
+    left:
+      - text: Get started
+        file: get_started.qmd
+      - text: Reference
+        file: reference/index.qmd
+      - text: Guides
+        menu:
+          - text: Defining the replay sequence
+            file: guides/replay.qmd
+          - text: Measures of your own
+            file: guides/measures.qmd
+      - text: algotradelib (C++)
+        href: https://algotradelib.github.io/docs/
+    right:
+      - icon: github
+        href: https://github.com/algotradelib/pyatl
+        aria-label: pyatl on GitHub
+
+format:
+  html:
+    theme:
+      light: [default, doxygen-light.scss]
+      dark: [default, doxygen-dark.scss]
+    # Follow the reader's system setting, as the library's Doxygen pages do (HTML_COLORSTYLE = AUTO_LIGHT).
+    respect-user-color-scheme: true
+    highlight-style: github
+    code-copy: hover
+    code-overflow: scroll
+    toc: true
+    toc-depth: 2
+
+quartodoc:
+  title: Reference
+  package: pyatl
+  sections:
+    - title: Backtest
+      desc: "Replay bars through a Python strategy."
+      contents:
+        - backtest
+        - Replay
+        - BacktestResult
+    - title: Strategy interface
+      desc: "What a strategy handler receives."
+      contents:
+        - Bar
+        - Context
+
+jupyter: python3
+execute:
+  freeze: false
