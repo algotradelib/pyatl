@@ -14,9 +14,46 @@ from . import _core
 class BacktestResult:
     """What one replay produced.
 
-    `fills` and `equity` are dicts of NumPy columns (`pandas.DataFrame(result.fills)` makes a table).
-    Times are ns since the epoch (UTC). `halted` says why the replay stopped early, if it did; the figures
-    then cover only what ran. Summary figures are NaN where they do not exist.
+    `fills`, `equity`, `rejected` and `refused` are dicts of columns (`pandas.DataFrame(result.fills)` makes
+    a table). Times are ns since the epoch (UTC). `halted` says why the replay stopped early, if it did; the
+    figures then cover only what ran. Figures are NaN where the library has none.
+
+    Attributes
+    ----------
+    bars : int
+        Bars replayed.
+    fills : dict of str to array
+        One row per fill: `time`, `symbol`, `side` ("buy" or "sell"), `quantity`, `price` (slippage
+        included), `commission`, `tax` (sale tax, KRW) and `slippage` (the price per share given up to
+        slippage, already in `price`).
+    equity : dict of str to array
+        The equity curve: `time` and `equity`, one point per period end.
+    opening_equity, closing_equity : str
+        Equity at the first and last point, as exact decimal text.
+    halted : str or None
+        Why the replay stopped early, or None.
+    total_return, sharpe, annualized_sharpe, max_drawdown, sortino : float
+        The library's summary of the equity curve.
+    turnover : float
+        One-way turnover over the run: the fraction of equity traded.
+    commission_paid, tax_paid, slippage_paid : float
+        Costs over the run, KRW; NaN where the library cannot state a total.
+    rejected : dict of str to list
+        Targets the runner could not turn into an order: `symbol` and `reason` (the library's name).
+    refused : dict of str to array
+        Orders the risk guard refused: `symbol`, `reason` (the library's name), and the `limit` exceeded and
+        the value `attempted`, NaN where the reason has none.
+    unfilled : int
+        Orders still waiting when the replay ended.
+    gaps : int
+        Bars that did not follow the bar before them; nothing is interpolated across a gap.
+    unvalued_bars : int
+        Bars at which the equity could not be valued exactly (a total too large for an exact decimal); such
+        a bar has no point in `equity`. The library's own figures leave the next period's return out; a
+        return computed between two exported points would span the missing bar. Check it is 0 before
+        computing measures from `equity` per period.
+    lowest_cash : float
+        The lowest cash an execution left, if cash went below zero; NaN otherwise.
     """
 
     bars: int
@@ -29,6 +66,17 @@ class BacktestResult:
     sharpe: float
     annualized_sharpe: float
     max_drawdown: float
+    sortino: float
+    turnover: float
+    commission_paid: float
+    tax_paid: float
+    slippage_paid: float
+    rejected: dict[str, Any]
+    refused: dict[str, Any]
+    unfilled: int
+    gaps: int
+    unvalued_bars: int
+    lowest_cash: float
 
 
 class Replay:

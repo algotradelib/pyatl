@@ -32,6 +32,16 @@ nb::dict to_dict(Result r) {
   fills["quantity"] = array(std::move(r.fill_quantity));
   fills["price"] = array(std::move(r.fill_price));
   fills["commission"] = array(std::move(r.fill_commission));
+  fills["tax"] = array(std::move(r.fill_tax));
+  fills["slippage"] = array(std::move(r.fill_slippage));
+  nb::dict rejected;
+  rejected["symbol"] = nb::cast(r.rejected_symbol);
+  rejected["reason"] = nb::cast(r.rejected_reason);
+  nb::dict refused;
+  refused["symbol"] = nb::cast(r.refused_symbol);
+  refused["reason"] = nb::cast(r.refused_reason);
+  refused["limit"] = array(std::move(r.refused_limit));
+  refused["attempted"] = array(std::move(r.refused_attempted));
   nb::dict equity;
   equity["time"] = array(std::move(r.equity_time));
   equity["equity"] = array(std::move(r.equity));
@@ -46,6 +56,17 @@ nb::dict to_dict(Result r) {
   d["sharpe"] = r.sharpe;
   d["annualized_sharpe"] = r.annualized_sharpe;
   d["max_drawdown"] = r.max_drawdown;
+  d["sortino"] = r.sortino;
+  d["turnover"] = r.turnover;
+  d["commission_paid"] = r.commission_paid;
+  d["tax_paid"] = r.tax_paid;
+  d["slippage_paid"] = r.slippage_paid;
+  d["rejected"] = rejected;
+  d["refused"] = refused;
+  d["unfilled"] = r.unfilled;
+  d["gaps"] = r.gaps;
+  d["unvalued_bars"] = r.unvalued_bars;
+  d["lowest_cash"] = r.lowest_cash;
   return d;
 }
 
