@@ -27,7 +27,11 @@ class BacktestResult:
         included), `commission`, `tax` (sale tax, KRW) and `slippage` (the price per share given up to
         slippage, already in `price`).
     equity : dict of str to array
-        The equity curve: `time` and `equity`, one point per period end.
+        The equity curve: `time`, `equity`, and `period_return`, the library's return since the previous point
+        (rounded to eight places), the series its Sharpe and Sortino are computed from. A return is NaN on the
+        first point, after an unvalued bar, after a point with equity at or below zero, and where the exact
+        arithmetic fails; if equity was at or below zero before the last point, the library reports no Sharpe
+        or Sortino at all.
     opening_equity, closing_equity : str
         Equity at the first and last point, as exact decimal text; empty when the curve has no point.
     halted : str or None
@@ -61,6 +65,14 @@ class BacktestResult:
     lowest_cash : float
         The lowest cash (KRW) an execution left, if an execution took cash below zero; NaN otherwise, which
         includes a run that started below zero and executed nothing.
+    aborted : int
+        Orders cleared when the replay halted, apart from `unfilled`.
+    overdrawn_bars : int
+        Input bars that ended with cash below zero (with several symbols, one per symbol's bar).
+    unchecked_fill_causality : int
+        Decisions to fill an order against a bar that the engine could not check were made before that bar
+        (for example with weekly, monthly or yearly bars stamped at their close). Counted when the order is
+        matched to the bar, before it is priced, so it is not a count of fills.
     """
 
     bars: int
@@ -84,6 +96,9 @@ class BacktestResult:
     gaps: int
     unvalued_bars: int
     lowest_cash: float
+    aborted: int
+    overdrawn_bars: int
+    unchecked_fill_causality: int
 
 
 class Replay:
