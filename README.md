@@ -48,6 +48,23 @@ Both are valid only during the call; keep the numbers, not the objects.
 The time is a `time` column or a pandas `DatetimeIndex`, as datetime64; integer times are refused.
 [`examples/sma_crossover.py`](examples/sma_crossover.py) is a complete strategy.
 
+## Feeding a replay yourself
+
+`backtest()` replays the bars you give it in time order.
+When the sequence is yours to define (a resampled path, a rolling window, bars generated as the run goes), feed a `Replay` instead:
+
+```python
+replay = pyatl.Replay(Hold(), ["005930", "000660"], commission=0.00015)
+for block in my_blocks():  # each a table in the order you want, e.g. a pandas DataFrame
+    replay.feed_bars(block["symbol"], block["time"], open=block["open"], high=block["high"],
+                     low=block["low"], close=block["close"], volume=block["volume"])
+result = replay.finish()
+```
+
+`feed(data)` takes the same `{symbol: bars}` as `backtest()`.
+Each feed is checked before any of it runs: a symbol's bars must move forward in time, and no bar may end before the bar fed before it.
+The bars still run through the C++ engine one at a time, so feeding in blocks costs no more than one `backtest()` call.
+
 ## Status
 
 Early.
