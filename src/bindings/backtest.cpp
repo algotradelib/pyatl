@@ -45,6 +45,7 @@ nb::dict to_dict(Result r) {
   nb::dict equity;
   equity["time"] = array(std::move(r.equity_time));
   equity["equity"] = array(std::move(r.equity));
+  equity["period_return"] = array(std::move(r.period_return));
   nb::dict d;
   d["bars"] = r.bars;
   d["fills"] = fills;
@@ -66,6 +67,9 @@ nb::dict to_dict(Result r) {
   d["unfilled"] = r.unfilled;
   d["gaps"] = r.gaps;
   d["unvalued_bars"] = r.unvalued_bars;
+  d["aborted"] = r.aborted;
+  d["overdrawn_bars"] = r.overdrawn_bars;
+  d["unchecked_fill_causality"] = r.unchecked_fill_causality;
   d["lowest_cash"] = r.lowest_cash;
   return d;
 }

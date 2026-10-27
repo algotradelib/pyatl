@@ -29,7 +29,7 @@ struct Result {
   std::vector<std::string> fill_symbol, fill_side;
   std::vector<double> fill_quantity, fill_price, fill_commission, fill_tax, fill_slippage;
   std::vector<std::int64_t> equity_time;
-  std::vector<double> equity;
+  std::vector<double> equity, period_return;
   std::string opening_equity, closing_equity;
   std::optional<std::string> halted;
   double total_return{NAN}, sharpe{NAN}, annualized_sharpe{NAN}, max_drawdown{NAN};
@@ -37,7 +37,7 @@ struct Result {
   std::vector<std::string> rejected_symbol, rejected_reason;
   std::vector<std::string> refused_symbol, refused_reason;
   std::vector<double> refused_limit, refused_attempted;
-  std::size_t unfilled{0}, gaps{0}, unvalued_bars{0};
+  std::size_t unfilled{0}, gaps{0}, unvalued_bars{0}, aborted{0}, overdrawn_bars{0}, unchecked_fill_causality{0};
   double lowest_cash{NAN};
 };
 
@@ -55,6 +55,12 @@ Result result_of(const Engine& engine, atl::BarInterval interval) {
   Result out;
   const auto& result = engine.result();
   out.bars = result.bars_;
+  for (auto* column : {&out.fill_quantity, &out.fill_price, &out.fill_commission, &out.fill_tax, &out.fill_slippage}) {
+    column->reserve(result.executions_.size());
+  }
+  out.fill_time.reserve(result.executions_.size());
+  out.fill_symbol.reserve(result.executions_.size());
+  out.fill_side.reserve(result.executions_.size());
   for (const auto& execution : result.executions_) {
     const auto& fill = execution.fill_;
     out.fill_time.push_back(to_ns(fill.at_));
@@ -79,10 +85,17 @@ Result result_of(const Engine& engine, atl::BarInterval interval) {
   out.unfilled = result.unfilled_;
   out.gaps = result.gaps_;
   out.unvalued_bars = result.unvalued_bars_;
+  out.aborted = result.aborted_;
+  out.overdrawn_bars = result.overdrawn_bars_;
+  out.unchecked_fill_causality = result.unchecked_fill_causality_;
   if (result.lowest_cash_) out.lowest_cash = to_double(result.lowest_cash_->amount_);
+  out.equity_time.reserve(result.equity_.size());
+  out.equity.reserve(result.equity_.size());
+  out.period_return.reserve(result.equity_.size());
   for (const auto& point : result.equity_) {
     out.equity_time.push_back(to_ns(point.at_));
     out.equity.push_back(to_double(point.equity_));
+    out.period_return.push_back(point.period_return_);  // missing() is a NaN already
   }
   if (result.halted_) out.halted = result.halted_->message_;
   // The costs are known from the executions alone, so they are read even when no equity point could be valued;

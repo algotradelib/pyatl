@@ -34,16 +34,20 @@ result = pyatl.backtest(
 
 ## The library's figures, recomputed
 
-Total return and drawdown come out the same from the exported curve.
-Sharpe agrees to about four significant digits: the library computes each period's return exactly from decimal equity and rounds it to eight places, while the exported curve is floating point.
+`result.equity["period_return"]` is the series the library's Sharpe and Sortino are computed from: each period's return, computed exactly from decimal equity and rounded to eight places, NaN on the first point and wherever the library has no return (after a bar whose equity could not be valued, or after equity at or below zero).
+For a run like this one, a measure computed from it matches the library's; one computed from the floating-point equity levels agrees to about four significant digits.
+If equity was at or below zero before the last point, the library reports no Sharpe or Sortino at all, while the remaining returns would still give a number: check `np.isnan(result.sharpe)` before comparing.
 
 ```{python}
 equity = result.equity["equity"]
-returns = equity[1:] / equity[:-1] - 1
+returns = result.equity["period_return"]
+valid = returns[~np.isnan(returns)]
+from_levels = equity[1:] / equity[:-1] - 1
 peak = np.maximum.accumulate(equity)
 print(f"total return  library {result.total_return:.10f}  numpy {equity[-1] / equity[0] - 1:.10f}")
 print(f"max drawdown  library {result.max_drawdown:.10f}  numpy {((peak - equity) / peak).max():.10f}")
-print(f"sharpe        library {result.sharpe:.10f}  numpy {returns.mean() / returns.std(ddof=1):.10f}")
+print(f"sharpe        library {result.sharpe:.10f}  from period_return {valid.mean() / valid.std(ddof=1):.10f}")
+print(f"              from the levels instead {from_levels.mean() / from_levels.std(ddof=1):.10f}")
 ```
 
 Check `result.unvalued_bars == 0` first: a bar whose equity could not be valued has no point in the curve, and a return computed between two exported points would span it.
@@ -53,7 +57,7 @@ Check `result.unvalued_bars == 0` first: a bar whose equity could not be valued 
 ```{python}
 years = (result.equity["time"][-1] - result.equity["time"][0]) / (365.25 * 86400e9)
 cagr = (equity[-1] / equity[0]) ** (1 / years) - 1
-var_95 = -np.quantile(returns, 0.05)
+var_95 = -np.quantile(valid, 0.05)
 fills = pd.DataFrame(result.fills)
 trades = fills.groupby("side")["quantity"].sum()
 print(f"CAGR {cagr:.2%}, one-day VaR(95%) {var_95:.2%}")
