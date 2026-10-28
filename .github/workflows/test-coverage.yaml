@@ -1,10 +1,26 @@
-# Coverage of pyatl's Python (pytest-cov) and of its own C++ (gcov over include/pyatl and src/bindings), to Codecov.
+# Coverage of pyatl, its Python (pytest-cov) and its binding's C++ (gcov over include/pyatl and src/bindings), to Codecov as one report.
 # Pull requests measure but upload nothing: the token is never in a job that runs pull-request code.
 on:
   push:
-    branches: [main]
+    branches: [main, master, 'hotfix/*', 'release/*', develop]
+    paths:
+      - 'include/**'
+      - 'src/**'
+      - 'tests/**'
+      - 'CMakeLists.txt'
+      - 'pyproject.toml'
+      - 'codecov.yml'
+      - '.github/workflows/test-coverage.yaml'
   pull_request:
-    branches: [main]
+    branches: [main, master, develop]
+    paths:
+      - 'include/**'
+      - 'src/**'
+      - 'tests/**'
+      - 'CMakeLists.txt'
+      - 'pyproject.toml'
+      - 'codecov.yml'
+      - '.github/workflows/test-coverage.yaml'
   workflow_dispatch:
 
 name: test-coverage
@@ -45,20 +61,11 @@ jobs:
         run: |
           gcovr --root . --filter include/pyatl/ --filter src/bindings/ --cobertura coverage-cpp.xml --print-summary build/coverage
 
+      # One report for the package: its C++ is the binding inside it, not a library of its own.
       - uses: codecov/codecov-action@v7
         if: github.event_name != 'pull_request'
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage-python.xml
+          files: coverage-python.xml,coverage-cpp.xml
           disable_search: true
-          flags: python
-          fail_ci_if_error: true
-
-      - uses: codecov/codecov-action@v7
-        if: github.event_name != 'pull_request'
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage-cpp.xml
-          disable_search: true
-          flags: cpp
           fail_ci_if_error: true

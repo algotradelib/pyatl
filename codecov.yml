@@ -7,15 +7,6 @@ coverage:
       default:
         informational: true
 
-flags:
-  python:
-    paths:
-      - src/pyatl/
-  cpp:
-    paths:
-      - include/pyatl/
-      - src/bindings/
-
 ignore:
   - tests
   - examples
