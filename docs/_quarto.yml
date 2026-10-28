@@ -1,11 +1,14 @@
 project:
   type: website
   output-dir: _site
+  # the icons Quarto does not link itself, named in _favicons.html
+  resources:
+    - favicon/
 
 website:
   title: "pyatl"
   description: "Python strategies on algotradelib's C++ backtest"
-  favicon: favicon.ico
+  favicon: favicon/favicon.ico
   site-url: https://algotradelib.github.io/python/
   repo-url: https://github.com/algotradelib/pyatl
   page-navigation: true
@@ -40,6 +43,7 @@ format:
       dark: [default, doxygen-dark.scss]
     # Follow the reader's system setting, as the library's Doxygen pages do (HTML_COLORSTYLE = AUTO_LIGHT).
     respect-user-color-scheme: true
+    include-in-header: _favicons.html
     highlight-style: github
     code-copy: hover
     code-overflow: scroll
