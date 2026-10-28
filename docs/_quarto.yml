@@ -17,7 +17,9 @@ website:
     right: "Built with [quartodoc](https://machow.github.io/quartodoc/) {{< var version >}}"
   navbar:
     pinned: true
-    logo: logo.png
+    logo:
+      light: logo.png
+      dark: logo-dark.png
     left:
       - text: Get started
         file: get_started.qmd
