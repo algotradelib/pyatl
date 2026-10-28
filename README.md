@@ -1,9 +1,12 @@
-# pyatl
+# pyatl <img src="docs/logo.png" align="right" height="139" alt="" />
 
-<!-- Badges: uncomment once the repository is public and the workflows have run on main.
-[![pip-check](https://github.com/algotradelib/pyatl/actions/workflows/pip-check.yaml/badge.svg)](https://github.com/algotradelib/pyatl/actions/workflows/pip-check.yaml)
+<!-- badges: start -->
+[![conda-check](https://github.com/algotradelib/pyatl/actions/workflows/conda-check.yaml/badge.svg?branch=main)](https://github.com/algotradelib/pyatl/actions/workflows/conda-check.yaml?query=branch%3Amain)
+[![pip-check](https://github.com/algotradelib/pyatl/actions/workflows/pip-check.yaml/badge.svg?branch=main)](https://github.com/algotradelib/pyatl/actions/workflows/pip-check.yaml?query=branch%3Amain)
+[![wheel-check](https://github.com/algotradelib/pyatl/actions/workflows/wheel-check.yaml/badge.svg?branch=main)](https://github.com/algotradelib/pyatl/actions/workflows/wheel-check.yaml?query=branch%3Amain)
 [![codecov](https://codecov.io/gh/algotradelib/pyatl/graph/badge.svg)](https://codecov.io/gh/algotradelib/pyatl)
--->
+[![Python Versions](https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14-blue)](https://github.com/algotradelib/pyatl/blob/main/pyproject.toml)
+<!-- badges: end -->
 
 Python strategies on [algotradelib](https://github.com/algotradelib/algotradelib)'s C++ backtest.
 You write the strategy in Python; the replay, the fills and the costs run in C++.
@@ -85,6 +88,12 @@ Early.
 It backtests Korean (KRX) stocks with target positions in whole shares.
 Other markets, limit orders and live trading are not supported yet.
 
-## License
+## Acknowledgements
 
-MIT
+This project was developed with the assistance of generative AI tools.
+
+## Disclaimer
+
+pyatl is released under the MIT license; see [LICENSE](LICENSE).
+The software is provided as is, without warranty of any kind, and the authors are not liable for any loss, including trading losses, arising from its use.
+Nothing in this repository is investment advice.
