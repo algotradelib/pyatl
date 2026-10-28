@@ -9,7 +9,7 @@ on:
     - cron: '0 21 * * *'
   workflow_dispatch:
 
-name: py-pip-check
+name: pip-check
 
 permissions:
   contents: read

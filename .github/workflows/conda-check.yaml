@@ -6,7 +6,7 @@ on:
     branches: [main]
   workflow_dispatch:
 
-name: py-conda-check
+name: conda-check
 
 permissions:
   contents: read

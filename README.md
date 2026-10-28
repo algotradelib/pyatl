@@ -1,7 +1,7 @@
 # pyatl
 
 <!-- Badges: uncomment once the repository is public and the workflows have run on main.
-[![py-pip-check](https://github.com/algotradelib/pyatl/actions/workflows/py-pip-check.yaml/badge.svg)](https://github.com/algotradelib/pyatl/actions/workflows/py-pip-check.yaml)
+[![pip-check](https://github.com/algotradelib/pyatl/actions/workflows/pip-check.yaml/badge.svg)](https://github.com/algotradelib/pyatl/actions/workflows/pip-check.yaml)
 [![codecov](https://codecov.io/gh/algotradelib/pyatl/graph/badge.svg)](https://codecov.io/gh/algotradelib/pyatl)
 -->
 

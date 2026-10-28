@@ -7,7 +7,7 @@ on:
     branches: [main]
   workflow_dispatch:
 
-name: py-wheel-check
+name: wheel-check
 
 permissions:
   contents: read
