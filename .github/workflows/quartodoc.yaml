@@ -1,12 +1,10 @@
 # Renders the quartodoc site (docs/build.sh) and, from main, deploys it into algotradelib.github.io/python.
 # The deploy never force-pushes: the Hugo site and the library's Doxygen pages deploy to the same repository, so after
-# a concurrent deploy this one rebases and retries, and fails on a conflict, instead of overwriting it. Pull requests
-# render only.
+# a concurrent deploy this one rebases and retries, and fails on a conflict, instead of overwriting it. A push to
+# another listed branch renders only.
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    branches: [main, master, develop]
   workflow_dispatch:
 
 name: quartodoc

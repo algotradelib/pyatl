@@ -1,7 +1,9 @@
-# The fetch route (PYATL_FETCH_DEPS=ON): the library's main and its dependencies built from source, weekly.
+# The fetch route (PYATL_FETCH_DEPS=ON): cmake/deps.cmake's URLs for the library's main and its dependencies, built
+# from source. The other checks use the GHCR package and run only when pyatl changes, so this monthly run is also the
+# one that builds pyatl against the library's current main without a pyatl commit.
 on:
   schedule:
-    - cron: '0 22 * * 0'
+    - cron: '0 22 1 * *'
   workflow_dispatch:
 
 name: fetch-check

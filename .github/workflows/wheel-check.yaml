@@ -2,9 +2,27 @@
 # A CI check, not a distribution: a published wheel needs a chosen compatibility floor (manylinux, macOS minimum).
 on:
   push:
-    branches: [main]
+    branches: [main, master, 'hotfix/*', 'release/*', develop]
+    paths:
+      - 'CMakeLists.txt'
+      - 'include/**'
+      - 'src/**'
+      - 'tests/**'
+      - 'requirements/**'
+      - 'pyproject.toml'
+      - 'cmake/**'
+      - '.github/workflows/wheel-check.yaml'
   pull_request:
-    branches: [main]
+    branches: [main, master, develop]
+    paths:
+      - 'CMakeLists.txt'
+      - 'include/**'
+      - 'src/**'
+      - 'tests/**'
+      - 'requirements/**'
+      - 'pyproject.toml'
+      - 'cmake/**'
+      - '.github/workflows/wheel-check.yaml'
   workflow_dispatch:
 
 name: wheel-check

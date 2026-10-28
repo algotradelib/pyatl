@@ -1,9 +1,27 @@
 # Builds pyatl in a conda-forge environment (requirements/environment.yml) against the installed algotradelib.
 on:
   push:
-    branches: [main]
+    branches: [main, master, 'hotfix/*', 'release/*', develop]
+    paths:
+      - 'CMakeLists.txt'
+      - 'include/**'
+      - 'src/**'
+      - 'tests/**'
+      - 'requirements/**'
+      - 'pyproject.toml'
+      - 'cmake/**'
+      - '.github/workflows/conda-check.yaml'
   pull_request:
-    branches: [main]
+    branches: [main, master, develop]
+    paths:
+      - 'CMakeLists.txt'
+      - 'include/**'
+      - 'src/**'
+      - 'tests/**'
+      - 'requirements/**'
+      - 'pyproject.toml'
+      - 'cmake/**'
+      - '.github/workflows/conda-check.yaml'
   workflow_dispatch:
 
 name: conda-check

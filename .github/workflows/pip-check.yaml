@@ -1,12 +1,27 @@
 # Builds pyatl with pip against the installed algotradelib from GHCR and runs the tests, on every OS and Python.
-# The daily run catches a library change that breaks pyatl: the package tag moves with the library's main.
 on:
   push:
-    branches: [main]
+    branches: [main, master, 'hotfix/*', 'release/*', develop]
+    paths:
+      - 'CMakeLists.txt'
+      - 'include/**'
+      - 'src/**'
+      - 'tests/**'
+      - 'requirements/**'
+      - 'pyproject.toml'
+      - 'cmake/**'
+      - '.github/workflows/pip-check.yaml'
   pull_request:
-    branches: [main]
-  schedule:
-    - cron: '0 21 * * *'
+    branches: [main, master, develop]
+    paths:
+      - 'CMakeLists.txt'
+      - 'include/**'
+      - 'src/**'
+      - 'tests/**'
+      - 'requirements/**'
+      - 'pyproject.toml'
+      - 'cmake/**'
+      - '.github/workflows/pip-check.yaml'
   workflow_dispatch:
 
 name: pip-check
