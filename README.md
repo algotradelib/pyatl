@@ -26,6 +26,10 @@ print(result.closing_equity, result.total_return, result.max_drawdown)
 
 Documentation: <https://algotradelib.github.io/python/>.
 
+How pyatl's Python API and its C++ extension use algotradelib's modules:
+
+![pyatl and algotradelib](docs/architecture.png)
+
 ## Install
 
 pyatl needs Python 3.12 or newer and an installed algotradelib; see [its install guide](https://github.com/algotradelib/algotradelib#install).
