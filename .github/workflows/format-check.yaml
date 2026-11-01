@@ -1,4 +1,4 @@
-# Checks the layout against .clang-format and fails on any difference; it never changes a file.
+# Checks the C++ against .clang-format and the Python with ruff, and fails on any difference; it never changes a file.
 on:
   workflow_dispatch:
   push:
@@ -21,3 +21,23 @@ jobs:
       - uses: algotradelib/.github/actions/format-check@main
         with:
           markdown: "README.md"
+
+  ruff:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # ruff's version comes from pyproject.toml's lint group.
+      - name: Format
+        uses: astral-sh/ruff-action@v4.1.0
+        with:
+          args: format --check --diff
+
+      - name: Lint
+        if: ${{ !cancelled() }}
+        uses: astral-sh/ruff-action@v4.1.0
+        with:
+          args: check

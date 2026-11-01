@@ -62,6 +62,10 @@ dev = [
     "pyatl[test,doc]"
 ]
 
+[dependency-groups]
+# The ruff that formats and lints the Python, locally (`pip install --group lint`) and in CI.
+lint = ["ruff==0.17.3"]
+
 [tool.scikit-build]
 minimum-version = "build-system.requires"
 build-dir = "build/{wheel_tag}"
@@ -77,7 +81,7 @@ PYATL_FETCH_DEPS = {env = "PYATL_FETCH_DEPS", default = "OFF"}
 testpaths = ["tests"]
 
 [tool.ruff]
-# Use CI's version (`pipx install ruff==0.17.3`); its default rules are the lint set.
+# The version is the `lint` group's (CI's ruff-action reads it there); ruff's default rules are the lint set.
 line-length = 120
 
 [tool.ruff.lint.isort]
