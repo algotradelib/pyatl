@@ -231,14 +231,16 @@ class ShortThenCover:
 
 def test_shorts_sell_shares_not_held_and_buy_them_back():
     strategy = ShortThenCover()
-    result = pyatl.backtest(strategy, {"005930": bars([100, 100, 120, 120])}, cash=1000, shorts=True)
+    result = pyatl.backtest(
+        strategy, {"005930": bars([100, 100, 120, 120], [100, 100, 130, 120])}, cash=1000, shorts=True
+    )
     assert result.refused["reason"] == []
     assert list(result.fills["side"]) == ["sell", "buy"]
     assert list(result.fills["quantity"]) == [5, 5]
     assert list(result.fills["price"]) == [100, 120]  # bar 1's and bar 3's open
     assert strategy.positions == [0, -5, -5, 0]  # a fill at a bar's open is held when the strategy sees that bar
     # The sale's proceeds are cash; the short is marked at the close, so equity falls as the price rises.
-    assert list(result.equity["equity"]) == [1000, 1000, 1000 - 5 * 20, 1000 - 5 * 20]
+    assert list(result.equity["equity"]) == [1000, 1000, 1000 - 5 * 30, 1000 - 5 * 20]
     assert float(result.closing_equity) == 1000 - 5 * 20
 
 

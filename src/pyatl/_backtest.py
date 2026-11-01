@@ -139,11 +139,11 @@ class Replay:
     scale : int
         Decimal places kept when prices and volumes are converted to exact decimals.
     shorts : bool
-        Whether a target below zero may sell shares not held. Off by default: such a sale is refused as
-        `quantity_not_sellable`. On, the sale fills like any other (taxed by `sell_tax`, its proceeds added to
+        Whether a target below zero may sell shares not held. Off by default: such a sale is refused whole as
+        `quantity_not_sellable`, so a long position targeted below zero is not closed either. On, the sale fills like any other (taxed by `sell_tax`, its proceeds added to
         cash) and the position is valued at each bar's close; no borrow, fee, margin or recall is modelled.
-        Since the proceeds count as cash, `ctx.cash()` includes them and a run levered through shorts shows
-        no `lowest_cash` or `overdrawn_bars`.
+        Since the proceeds count as cash, `ctx.cash()` includes them, and leverage through shorts does not show
+        in `lowest_cash` or `overdrawn_bars`.
 
     Attributes
     ----------
@@ -312,11 +312,11 @@ def backtest(
     scale : int
         Decimal places kept when prices and volumes are converted to exact decimals.
     shorts : bool
-        Whether a target below zero may sell shares not held. Off by default: such a sale is refused as
-        `quantity_not_sellable`. On, the sale fills like any other (taxed by `sell_tax`, its proceeds added to
+        Whether a target below zero may sell shares not held. Off by default: such a sale is refused whole as
+        `quantity_not_sellable`, so a long position targeted below zero is not closed either. On, the sale fills like any other (taxed by `sell_tax`, its proceeds added to
         cash) and the position is valued at each bar's close; no borrow, fee, margin or recall is modelled.
-        Since the proceeds count as cash, `ctx.cash()` includes them and a run levered through shorts shows
-        no `lowest_cash` or `overdrawn_bars`.
+        Since the proceeds count as cash, `ctx.cash()` includes them, and leverage through shorts does not show
+        in `lowest_cash` or `overdrawn_bars`.
 
     Returns
     -------
