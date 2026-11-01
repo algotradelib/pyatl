@@ -75,3 +75,11 @@ PYATL_FETCH_DEPS = {env = "PYATL_FETCH_DEPS", default = "OFF"}
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+# Use CI's version (`pipx install ruff==0.17.3`); its default rules are the lint set.
+line-length = 120
+
+[tool.ruff.lint.isort]
+# `pyatl.backtest` is an alias made at import time, with no file under src/, so name the package.
+known-first-party = ["pyatl"]
