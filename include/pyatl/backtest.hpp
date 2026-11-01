@@ -8,12 +8,12 @@
 
 #include <nanobind/nanobind.h>
 
+#include <algorithm>
 #include <memory>
 #include <optional>
-#include <algorithm>
 #include <queue>
-#include <tuple>
 #include <string>
+#include <tuple>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -41,13 +41,15 @@ struct Result {
   double lowest_cash{NAN};
 };
 
-inline double to_double_or_nan(const std::optional<atl::Decimal64>& value) { return value ? to_double(*value) : NAN; }
+inline double to_double_or_nan(const std::optional<atl::Decimal64>& value) {
+  return value ? to_double(*value) : NAN;
+}
 
 /** Bars in the order they are to be fed, converted and checked before the first one is. */
 struct Block {
-  std::vector<std::size_t> symbol;  // index into the replay's symbols
+  std::vector<std::size_t> symbol; // index into the replay's symbols
   std::vector<atl::Bar> bars;
-  std::vector<TimePoint> ends;  // bar_period_end of each bar
+  std::vector<TimePoint> ends; // bar_period_end of each bar
 };
 
 template <class Engine>
@@ -88,16 +90,20 @@ Result result_of(const Engine& engine, atl::BarInterval interval) {
   out.aborted = result.aborted_;
   out.overdrawn_bars = result.overdrawn_bars_;
   out.unchecked_fill_causality = result.unchecked_fill_causality_;
-  if (result.lowest_cash_) out.lowest_cash = to_double(result.lowest_cash_->amount_);
+  if (result.lowest_cash_) {
+    out.lowest_cash = to_double(result.lowest_cash_->amount_);
+  }
   out.equity_time.reserve(result.equity_.size());
   out.equity.reserve(result.equity_.size());
   out.period_return.reserve(result.equity_.size());
   for (const auto& point : result.equity_) {
     out.equity_time.push_back(to_ns(point.at_));
     out.equity.push_back(to_double(point.equity_));
-    out.period_return.push_back(point.period_return_);  // missing() is a NaN already
+    out.period_return.push_back(point.period_return_); // missing() is a NaN already
   }
-  if (result.halted_) out.halted = result.halted_->message_;
+  if (result.halted_) {
+    out.halted = result.halted_->message_;
+  }
   // The costs are known from the executions alone, so they are read even when no equity point could be valued;
   // the figures of the curve only when it has a point.
   const auto periods = atl::backtest::periods_per_year(interval, market::session(), market::trading_days);
@@ -132,7 +138,9 @@ public:
   EngineOf(Strategy strategy, atl::backtest::ReplayConfig config, atl::backtest::NextBarFillModel fills)
   : engine_(std::move(strategy), std::move(config), std::move(fills)) {}
 
-  void feed(const atl::strategy::BarEvent& event) override { engine_.feed(event); }
+  void feed(const atl::strategy::BarEvent& event) override {
+    engine_.feed(event);
+  }
 
   Result finish(atl::BarInterval interval) override {
     engine_.finish();
@@ -152,8 +160,10 @@ private:
  */
 class Replay {
 public:
-  Replay(nb::handle strategy, const std::vector<std::string>& symbols, const Settings& settings,
-         const std::string& interval, const std::string& stamp)
+  Replay(
+    nb::handle strategy, const std::vector<std::string>& symbols, const Settings& settings, const std::string& interval,
+    const std::string& stamp
+  )
   : interval_(parse_interval(interval)), stamp_(parse_stamp(stamp)) {
     if (nb::hasattr(strategy, "on_start")) {
       // The library's replay never calls on_start; a setup step that silently never runs is worse than none.
@@ -173,17 +183,24 @@ public:
       config.instruments_.push_back(market::reference_of(symbol));
     }
     last_.resize(symbols_.size());
-    const auto fills = atl::backtest::NextBarFillModel(
-      atl::backtest::CommissionModel::of(atl::Decimal64::parse(settings.commission), atl::Decimal64::parse(settings.min_commission)),
-      atl::backtest::SlippageModel::of_ticks(settings.slippage_ticks)
-    ).with_sell_tax(atl::backtest::SellTax{atl::Decimal64::parse(settings.sell_tax), market::country});
+    const auto fills =
+      atl::backtest::NextBarFillModel(
+        atl::backtest::CommissionModel::of(
+          atl::Decimal64::parse(settings.commission), atl::Decimal64::parse(settings.min_commission)
+        ),
+        atl::backtest::SlippageModel::of_ticks(settings.slippage_ticks)
+      )
+        .with_sell_tax(atl::backtest::SellTax{atl::Decimal64::parse(settings.sell_tax), market::country});
 
     handlers_ = std::make_unique<Handlers>(strategy, ids_, market::currency());
     const bool bar = !handlers_->on_bar.is_none(), bars = !handlers_->on_bars.is_none();
     if (bar == bars) {
-      throw nb::type_error(bar ? "a strategy defines on_bar or on_bars, not both: on_bar receives each bar, "
-                                 "on_bars every instrument's bar for a period at once"
-                               : "a strategy must define on_bar(ctx, bar) or on_bars(ctx, bars)");
+      throw nb::type_error(
+        bar ?
+          "a strategy defines on_bar or on_bars, not both: on_bar receives each bar, "
+          "on_bars every instrument's bar for a period at once" :
+          "a strategy must define on_bar(ctx, bar) or on_bars(ctx, bars)"
+      );
     }
     if (bar) {
       engine_ = std::make_unique<EngineOf<PyOnBar>>(PyOnBar{{handlers_.get()}}, std::move(config), fills);
@@ -195,9 +212,13 @@ public:
   Replay(const Replay&) = delete;
   Replay& operator=(const Replay&) = delete;
 
-  ~Replay() { release(); }
+  ~Replay() {
+    release();
+  }
 
-  const std::vector<std::string>& symbols() const noexcept { return symbols_; }
+  const std::vector<std::string>& symbols() const noexcept {
+    return symbols_;
+  }
 
   /** Feeds whole series, merged by period end; ties go to the earlier symbol in `symbols()`. */
   void feed_series(const std::vector<Series>& all) {
@@ -211,22 +232,32 @@ public:
         throw std::invalid_argument(series.symbol + ": its interval or stamp differs from the replay's");
       }
       const auto at = index_.find(series.symbol);
-      if (at == index_.end()) throw std::invalid_argument("unknown symbol: " + series.symbol);
-      if (seen[at->second]) throw std::invalid_argument("symbol given twice: " + series.symbol);
+      if (at == index_.end()) {
+        throw std::invalid_argument("unknown symbol: " + series.symbol);
+      }
+      if (seen[at->second]) {
+        throw std::invalid_argument("symbol given twice: " + series.symbol);
+      }
       seen[at->second] = true;
       symbol_of[k] = at->second;
-      if (series.bars.empty()) continue;
+      if (series.bars.empty()) {
+        continue;
+      }
       // Within a series, make_series ordered the bars and refused a repeated period.
       if (!later_than(last_[at->second], series.ends.front(), series.bars.front().timestamp_)) {
         throw std::invalid_argument(series.symbol + ": its first bar is not later than the last bar fed for it");
       }
-      if (!first || series.ends.front() < *first) first = series.ends.front();
+      if (!first || series.ends.front() < *first) {
+        first = series.ends.front();
+      }
     }
     if (first && !not_before(last_fed_, *first)) {
       throw std::invalid_argument("the earliest bar given ends before the last bar fed");
     }
 
-    run([&] { merge(all, symbol_of); });
+    run([&] {
+      merge(all, symbol_of);
+    });
   }
 
   /** Feeds a block in its own order, after checking it whole. */
@@ -243,36 +274,56 @@ public:
   Result finish() {
     require_open();
     Result result;
-    run([&] { result = engine_->finish(interval_); });
+    run([&] {
+      result = engine_->finish(interval_);
+    });
     state_ = State::FINISHED;
     release();
     return result;
   }
 
-  std::size_t symbol_count() const noexcept { return symbols_.size(); }
+  std::size_t symbol_count() const noexcept {
+    return symbols_.size();
+  }
 
-  atl::BarInterval interval() const noexcept { return interval_; }
+  atl::BarInterval interval() const noexcept {
+    return interval_;
+  }
 
-  atl::BarStamp stamp() const noexcept { return stamp_; }
+  atl::BarStamp stamp() const noexcept {
+    return stamp_;
+  }
 
   /** Calls `visit` on every Python object the replay keeps (for the garbage collector). */
   template <class Visit>
   int traverse(Visit visit) const {
-    if (!handlers_) return 0;
-    for (const auto* object : {&handlers_->ctx_obj, &handlers_->bar_obj, &handlers_->on_bar, &handlers_->on_bars,
-                               &handlers_->on_stop}) {
-      if (const int status = visit(object->ptr())) return status;
+    if (!handlers_) {
+      return 0;
+    }
+    for (
+      const auto* object :
+      {&handlers_->ctx_obj, &handlers_->bar_obj, &handlers_->on_bar, &handlers_->on_bars, &handlers_->on_stop}
+    ) {
+      if (const int status = visit(object->ptr())) {
+        return status;
+      }
     }
     for (const auto& object : handlers_->slice_pool) {
-      if (const int status = visit(object.ptr())) return status;
+      if (const int status = visit(object.ptr())) {
+        return status;
+      }
     }
     return 0;
   }
 
   /** Drops the engine and the strategy's handlers; every later call raises. For the garbage collector. */
   void clear() {
-    if (state_ == State::FEEDING) return;
-    if (state_ == State::OPEN) state_ = State::CLEARED;
+    if (state_ == State::FEEDING) {
+      return;
+    }
+    if (state_ == State::OPEN) {
+      state_ = State::CLEARED;
+    }
     release();
   }
 
@@ -306,15 +357,23 @@ private:
   void merge(const std::vector<Series>& all, const std::vector<std::size_t>& symbol_of) {
     std::vector<std::size_t> active;
     for (std::size_t k = 0; k < all.size(); ++k) {
-      if (!all[k].bars.empty()) active.push_back(k);
+      if (!all[k].bars.empty()) {
+        active.push_back(k);
+      }
     }
-    std::sort(active.begin(), active.end(), [&](std::size_t a, std::size_t b) { return symbol_of[a] < symbol_of[b]; });
+    std::sort(active.begin(), active.end(), [&](std::size_t a, std::size_t b) {
+      return symbol_of[a] < symbol_of[b];
+    });
     std::vector<std::size_t> next(all.size(), 0);
     std::size_t scanned = 0, fed = 0;
     while (!active.empty()) {
-      if (scanned > 4 * fed + 4096) break;
+      if (scanned > 4 * fed + 4096) {
+        break;
+      }
       auto earliest = all[active.front()].ends[next[active.front()]];
-      for (const auto k : active) earliest = std::min(earliest, all[k].ends[next[k]]);
+      for (const auto k : active) {
+        earliest = std::min(earliest, all[k].ends[next[k]]);
+      }
       scanned += active.size();
       std::size_t kept = 0;
       for (const auto k : active) {
@@ -323,19 +382,25 @@ private:
           ++next[k];
           ++fed;
         }
-        if (next[k] < all[k].bars.size()) active[kept++] = k;
+        if (next[k] < all[k].bars.size()) {
+          active[kept++] = k;
+        }
       }
       active.resize(kept);
     }
     // (period end, symbol index, series position): the smallest first.
     using Head = std::tuple<TimePoint, std::size_t, std::size_t>;
     std::priority_queue<Head, std::vector<Head>, std::greater<Head>> heads;
-    for (const auto k : active) heads.emplace(all[k].ends[next[k]], symbol_of[k], k);
+    for (const auto k : active) {
+      heads.emplace(all[k].ends[next[k]], symbol_of[k], k);
+    }
     while (!heads.empty()) {
       const auto [end, symbol, k] = heads.top();
       heads.pop();
       feed_one(symbol, all[k].bars[next[k]], end);
-      if (++next[k] < all[k].bars.size()) heads.emplace(all[k].ends[next[k]], symbol, k);
+      if (++next[k] < all[k].bars.size()) {
+        heads.emplace(all[k].ends[next[k]], symbol, k);
+      }
     }
   }
 
@@ -358,8 +423,9 @@ private:
       const auto time = block.bars[i].timestamp_;
       auto& mine = last[block.symbol[i]];
       if (!later_than(mine, end, time)) {
-        throw std::invalid_argument("row " + std::to_string(i) + ": " + symbols_[block.symbol[i]] +
-                                    " is not later than its previous bar");
+        throw std::invalid_argument(
+          "row " + std::to_string(i) + ": " + symbols_[block.symbol[i]] + " is not later than its previous bar"
+        );
       }
       if (!not_before(previous, end)) {
         throw std::invalid_argument("row " + std::to_string(i) + " ends before the bar fed before it");

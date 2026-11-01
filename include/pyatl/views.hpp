@@ -25,7 +25,9 @@ inline std::int64_t to_ns(std::chrono::system_clock::time_point at) {
   return std::chrono::duration_cast<std::chrono::nanoseconds>(at.time_since_epoch()).count();
 }
 
-inline double to_double(const atl::Decimal64& value) { return atl::analytics::to_scalar(value); }
+inline double to_double(const atl::Decimal64& value) {
+  return atl::analytics::to_scalar(value);
+}
 
 /** One bar as doubles. `time` is the period end, ns since the epoch (UTC). */
 struct Bar {
@@ -34,7 +36,9 @@ struct Bar {
   double open{NAN}, high{0}, low{0}, close{0}, volume{0};
 
   void fill(const atl::strategy::BarEvent& event) {
-    if (symbol != event.instrument_.symbol_) symbol = event.instrument_.symbol_;
+    if (symbol != event.instrument_.symbol_) {
+      symbol = event.instrument_.symbol_;
+    }
     time = to_ns(event.period_end_);
     open = event.bar_.open_ ? to_double(*event.bar_.open_) : NAN;
     high = to_double(event.bar_.high_);
@@ -51,7 +55,7 @@ struct Bar {
 class Context {
 public:
   explicit Context(const std::unordered_map<std::string, atl::InstrumentId>* ids, atl::Currency currency)
-      : ids_(ids), currency_(std::move(currency)) {}
+  : ids_(ids), currency_(std::move(currency)) {}
 
   template <class Ctx>
   void bind(Ctx& ctx) {
@@ -72,7 +76,9 @@ public:
     now_ = to_ns(ctx.now());
   }
 
-  void unbind() noexcept { ctx_ = nullptr; }
+  void unbind() noexcept {
+    ctx_ = nullptr;
+  }
 
   std::int64_t now() const {
     require_bound();
@@ -89,7 +95,9 @@ public:
   double position(const std::string& symbol) const {
     require_bound();
     const auto held = position_(ctx_, id_of(symbol));
-    if (!held) throw std::overflow_error("the position of " + symbol + " overflowed");
+    if (!held) {
+      throw std::overflow_error("the position of " + symbol + " overflowed");
+    }
     return to_double(*held);
   }
 
@@ -97,18 +105,24 @@ public:
   std::optional<double> cash() const {
     require_bound();
     const auto amount = cash_(ctx_, currency_);
-    if (!amount) return std::nullopt;
+    if (!amount) {
+      return std::nullopt;
+    }
     return to_double(*amount);
   }
 
 private:
   void require_bound() const {
-    if (ctx_ == nullptr) throw std::logic_error("ctx is valid only inside a strategy handler");
+    if (ctx_ == nullptr) {
+      throw std::logic_error("ctx is valid only inside a strategy handler");
+    }
   }
 
   const atl::InstrumentId& id_of(const std::string& symbol) const {
     const auto found = ids_->find(symbol);
-    if (found == ids_->end()) throw std::invalid_argument("unknown symbol: " + symbol);
+    if (found == ids_->end()) {
+      throw std::invalid_argument("unknown symbol: " + symbol);
+    }
     return found->second;
   }
 

@@ -24,16 +24,20 @@ struct Handlers {
   Context* ctx;
   nb::object bar_obj;
   Bar* bar;
-  std::vector<nb::object> slice_pool;  // on_bars: one bar object per instrument, reused
+  std::vector<nb::object> slice_pool; // on_bars: one bar object per instrument, reused
   std::vector<Bar*> slice_ptrs;
-  nb::object on_bar, on_bars, on_stop;  // None when the class lacks it
+  nb::object on_bar, on_bars, on_stop; // None when the class lacks it
 
-  explicit Handlers(nb::handle strategy, const std::unordered_map<std::string, atl::InstrumentId>& ids, atl::Currency currency) {
+  explicit Handlers(
+    nb::handle strategy, const std::unordered_map<std::string, atl::InstrumentId>& ids, atl::Currency currency
+  ) {
     ctx_obj = nb::cast(Context(&ids, std::move(currency)));
     ctx = nb::inst_ptr<Context>(ctx_obj);
     bar_obj = nb::cast(Bar{});
     bar = nb::inst_ptr<Bar>(bar_obj);
-    auto method = [&](const char* name) { return nb::hasattr(strategy, name) ? nb::object(strategy.attr(name)) : nb::none(); };
+    auto method = [&](const char* name) {
+      return nb::hasattr(strategy, name) ? nb::object(strategy.attr(name)) : nb::none();
+    };
     on_bar = method("on_bar");
     on_bars = method("on_bars");
     on_stop = method("on_stop");
@@ -44,8 +48,12 @@ struct Handlers {
 class Bound {
 public:
   template <class Ctx>
-  Bound(Handlers& h, Ctx& ctx) : h_(h) { h_.ctx->bind(ctx); }
-  ~Bound() { h_.ctx->unbind(); }
+  Bound(Handlers& h, Ctx& ctx) : h_(h) {
+    h_.ctx->bind(ctx);
+  }
+  ~Bound() {
+    h_.ctx->unbind();
+  }
   Bound(const Bound&) = delete;
   Bound& operator=(const Bound&) = delete;
 
@@ -58,7 +66,9 @@ struct LifecycleHandlers {
 
   template <class Ctx>
   void on_stop(Ctx& ctx) {
-    if (h->on_stop.is_none()) return;
+    if (h->on_stop.is_none()) {
+      return;
+    }
     Bound bound(*h, ctx);
     h->on_stop(h->ctx_obj);
   }

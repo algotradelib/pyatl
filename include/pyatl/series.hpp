@@ -27,11 +27,15 @@ using TimePoint = std::chrono::system_clock::time_point;
  */
 namespace market {
 
-inline atl::Currency currency() { return atl::Currency{"KRW"}; }
+inline atl::Currency currency() {
+  return atl::Currency{"KRW"};
+}
 
 inline constexpr atl::Country country = atl::Country::KR;
 
-inline atl::strategy::SessionWindow session() { return atl::strategy::SessionWindow::krx(); }
+inline atl::strategy::SessionWindow session() {
+  return atl::strategy::SessionWindow::krx();
+}
 
 inline constexpr double trading_days = 245.0;
 
@@ -58,7 +62,7 @@ struct Series {
   atl::BarInterval interval{atl::BarInterval::ONE_DAY};
   atl::BarStamp stamp{atl::BarStamp::OPEN};
   std::vector<atl::Bar> bars;
-  std::vector<TimePoint> ends;  // bar_period_end of each bar, increasing
+  std::vector<TimePoint> ends; // bar_period_end of each bar, increasing
 };
 
 /** Costs and starting cash, as decimal strings (exact). */
@@ -72,7 +76,9 @@ struct Settings {
 
 inline atl::BarInterval parse_interval(const std::string& text) {
   for (const auto interval : atl::all_bar_intervals) {
-    if (atl::bar_interval_name(interval) == text) return interval;
+    if (atl::bar_interval_name(interval) == text) {
+      return interval;
+    }
   }
   std::string names;
   for (const auto interval : atl::all_bar_intervals) {
@@ -82,8 +88,12 @@ inline atl::BarInterval parse_interval(const std::string& text) {
 }
 
 inline atl::BarStamp parse_stamp(const std::string& text) {
-  if (text == "open") return atl::BarStamp::OPEN;
-  if (text == "close") return atl::BarStamp::CLOSE;
+  if (text == "open") {
+    return atl::BarStamp::OPEN;
+  }
+  if (text == "close") {
+    return atl::BarStamp::CLOSE;
+  }
   throw std::invalid_argument("stamp is 'open' (the time is the period's start) or 'close' (its end)");
 }
 
@@ -94,22 +104,30 @@ inline TimePoint from_ns(std::int64_t ns) {
 inline atl::Decimal64 exact(double value, std::uint8_t scale, const char* field, std::size_t row) {
   const auto decimal = atl::analytics::to_decimal(value, scale);
   if (!decimal) {
-    throw std::invalid_argument(std::string(field) + " at row " + std::to_string(row) + " is not a representable decimal");
+    throw std::invalid_argument(
+      std::string(field) + " at row " + std::to_string(row) + " is not a representable decimal"
+    );
   }
   return *decimal;
 }
 
 inline std::uint8_t checked_scale(int scale) {
-  if (scale < 0 || scale > 18) throw std::invalid_argument("scale is 0 to 18");
+  if (scale < 0 || scale > 18) {
+    throw std::invalid_argument("scale is 0 to 18");
+  }
   return static_cast<std::uint8_t>(scale);
 }
 
 /** One row as a bar; an open of NaN means the source has none. */
-inline atl::Bar bar_of(std::int64_t time, double open, double high, double low, double close, double volume,
-                       std::uint8_t scale, std::size_t row) {
+inline atl::Bar bar_of(
+  std::int64_t time, double open, double high, double low, double close, double volume, std::uint8_t scale,
+  std::size_t row
+) {
   atl::Bar bar;
   bar.timestamp_ = from_ns(time);
-  if (!std::isnan(open)) bar.open_ = exact(open, scale, "open", row);
+  if (!std::isnan(open)) {
+    bar.open_ = exact(open, scale, "open", row);
+  }
   bar.high_ = exact(high, scale, "high", row);
   bar.low_ = exact(low, scale, "low", row);
   bar.close_ = exact(close, scale, "close", row);
@@ -132,7 +150,9 @@ inline void order_series(Series& series) {
     std::stable_sort(rows.begin(), rows.end(), earlier);
     std::vector<atl::Bar> sorted;
     sorted.reserve(n);
-    for (const auto row : rows) sorted.push_back(series.bars[row]);
+    for (const auto row : rows) {
+      sorted.push_back(series.bars[row]);
+    }
     series.bars = std::move(sorted);
   }
   series.ends.clear();
@@ -140,8 +160,10 @@ inline void order_series(Series& series) {
   for (std::size_t i = 0; i < n; ++i) {
     series.ends.push_back(atl::strategy::bar_period_end(series.bars[i], series.interval, series.stamp));
     if (i > 0 && !(series.ends[i - 1] < series.ends[i])) {
-      throw std::invalid_argument(series.symbol + ": rows " + std::to_string(rows[i - 1]) + " and " +
-                                  std::to_string(rows[i]) + " are bars for the same period");
+      throw std::invalid_argument(
+        series.symbol + ": rows " + std::to_string(rows[i - 1]) + " and " + std::to_string(rows[i]) +
+        " are bars for the same period"
+      );
     }
   }
 }

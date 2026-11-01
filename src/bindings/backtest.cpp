@@ -22,7 +22,9 @@ nb::dict to_dict(Result r) {
   auto array = [](auto values) {
     using T = typename decltype(values)::value_type;
     auto* owned = new std::vector<T>(std::move(values));
-    nb::capsule owner(owned, [](void* p) noexcept { delete static_cast<std::vector<T>*>(p); });
+    nb::capsule owner(owned, [](void* p) noexcept {
+      delete static_cast<std::vector<T>*>(p);
+    });
     return nb::ndarray<nb::numpy, T, nb::ndim<1>>(owned->data(), {owned->size()}, owner);
   };
   nb::dict fills;
@@ -74,12 +76,18 @@ nb::dict to_dict(Result r) {
   return d;
 }
 
-void feed_bars(Replay& replay, Indices symbol, Times time, Values open, Values high, Values low, Values close,
-               Values volume, int scale) {
+void feed_bars(
+  Replay& replay, Indices symbol, Times time, Values open, Values high, Values low, Values close, Values volume,
+  int scale
+) {
   const auto n = time.shape(0);
-  if (symbol.shape(0) != n) throw std::invalid_argument("symbol must have as many rows as time");
+  if (symbol.shape(0) != n) {
+    throw std::invalid_argument("symbol must have as many rows as time");
+  }
   for (const auto* column : {&open, &high, &low, &close, &volume}) {
-    if (column->shape(0) != n) throw std::invalid_argument("every column must have as many rows as time");
+    if (column->shape(0) != n) {
+      throw std::invalid_argument("every column must have as many rows as time");
+    }
   }
   const auto s = checked_scale(scale);
   const auto count = static_cast<std::int64_t>(replay.symbol_count());
@@ -89,8 +97,10 @@ void feed_bars(Replay& replay, Indices symbol, Times time, Values open, Values h
   block.ends.reserve(n);
   for (std::size_t i = 0; i < n; ++i) {
     if (symbol(i) < 0 || symbol(i) >= count) {
-      throw std::invalid_argument("symbol index " + std::to_string(symbol(i)) + " at row " + std::to_string(i) +
-                                  " is not one of the replay's " + std::to_string(count) + " symbols");
+      throw std::invalid_argument(
+        "symbol index " + std::to_string(symbol(i)) + " at row " + std::to_string(i) + " is not one of the replay's " +
+        std::to_string(count) + " symbols"
+      );
     }
     block.symbol.push_back(static_cast<std::size_t>(symbol(i)));
     block.bars.push_back(bar_of(time(i), open(i), high(i), low(i), close(i), volume(i), s, i));
@@ -103,7 +113,9 @@ void feed_bars(Replay& replay, Indices symbol, Times time, Values open, Values h
 // so a cycle through a strategy that keeps its replay can be collected (nanobind's reference-leak guide).
 int replay_traverse(PyObject* self, visitproc visit, void* arg) {
   Py_VISIT(Py_TYPE(self));
-  if (!nb::inst_ready(self)) return 0;
+  if (!nb::inst_ready(self)) {
+    return 0;
+  }
   return nb::inst_ptr<Replay>(self)->traverse([&](PyObject* object) {
     Py_VISIT(object);
     return 0;
@@ -111,7 +123,9 @@ int replay_traverse(PyObject* self, visitproc visit, void* arg) {
 }
 
 int replay_clear(PyObject* self) {
-  if (nb::inst_ready(self)) nb::inst_ptr<Replay>(self)->clear();
+  if (nb::inst_ready(self)) {
+    nb::inst_ptr<Replay>(self)->clear();
+  }
   return 0;
 }
 
@@ -126,10 +140,14 @@ PyType_Slot replay_slots[] = {
 
 void pyatl::bind_backtest(nb::module_& m) {
   nb::class_<Replay>(m, "Replay", nb::type_slots(replay_slots))
-    .def(nb::init<nb::handle, const std::vector<std::string>&, const Settings&, const std::string&, const std::string&>(),
-         "strategy"_a, "symbols"_a, "settings"_a, "interval"_a, "stamp"_a)
+    .def(
+      nb::init<nb::handle, const std::vector<std::string>&, const Settings&, const std::string&, const std::string&>(),
+      "strategy"_a, "symbols"_a, "settings"_a, "interval"_a, "stamp"_a
+    )
     .def_prop_ro("symbols", &Replay::symbols)
     .def("feed_series", &Replay::feed_series, "series"_a)
     .def("feed_bars", &feed_bars, "symbol"_a, "time"_a, "open"_a, "high"_a, "low"_a, "close"_a, "volume"_a, "scale"_a)
-    .def("finish", [](Replay& replay) { return to_dict(replay.finish()); });
+    .def("finish", [](Replay& replay) {
+      return to_dict(replay.finish());
+    });
 }
