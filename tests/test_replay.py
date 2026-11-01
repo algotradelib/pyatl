@@ -72,6 +72,29 @@ DATA = {
 }
 
 
+class Flip:
+    """Alternates every symbol between 5 and -5 shares."""
+
+    def __init__(self):
+        self.period = 0
+
+    def on_bars(self, ctx, bars):
+        for b in bars:
+            ctx.target(b.symbol, 5 if self.period % 2 else -5)
+        self.period += 1
+
+
+def test_shorts_reach_a_replay_fed_in_parts():
+    whole = pyatl.backtest(Flip(), DATA, shorts=True)
+    assert "sell" in list(whole.fills["side"]) and whole.refused["reason"] == []
+    parts = pyatl.Replay(Flip(), list(DATA), shorts=True)
+    for lo, hi in (("2024-01-01", "2024-01-03"), ("2024-01-04", "2024-12-31")):
+        parts.feed({s: f.loc[lo:hi] for s, f in DATA.items()})
+    same(whole, parts.finish())
+    default = pyatl.backtest(Flip(), DATA)
+    assert set(default.refused["reason"]) == {"quantity_not_sellable"}
+
+
 @pytest.mark.parametrize("make", [Rebalance, RebalanceBars])
 def test_feeding_in_chunks_or_blocks_equals_backtest(make):
     whole = pyatl.backtest(make(), DATA)

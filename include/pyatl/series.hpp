@@ -72,6 +72,7 @@ struct Settings {
   std::string min_commission{"0"};
   std::string sell_tax{"0"};
   int slippage_ticks{0};
+  bool shorts{false};
 };
 
 inline atl::BarInterval parse_interval(const std::string& text) {

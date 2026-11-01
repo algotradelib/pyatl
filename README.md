@@ -91,6 +91,7 @@ The fills and the equity curve are columns (NumPy arrays, and lists for the symb
 
 Early.
 It backtests Korean (KRX) stocks with target positions in whole shares.
+A position below zero needs `shorts=True`; no borrow is modelled.
 Other markets, limit orders and live trading are not supported yet.
 
 ## Acknowledgements

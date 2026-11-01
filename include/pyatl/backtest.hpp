@@ -173,6 +173,7 @@ public:
     config.cash_ = atl::Decimal64::parse(settings.cash);
     config.currency_ = market::currency();
     config.limits_.permitted_phases_ = std::nullopt;
+    config.limits_.enforce_sellable_quantity_ = !settings.shorts;
     for (const auto& symbol : symbols) {
       if (!ids_.emplace(symbol, market::instrument_of(symbol)).second) {
         throw std::invalid_argument("symbol given twice: " + symbol);

@@ -214,6 +214,45 @@ def test_a_sale_of_shares_not_held_is_refused_with_the_library_reason():
     assert len(result.fills["time"]) == 0
 
 
+class ShortThenCover:
+    """Targets -5 on the first bar and 0 on the third, recording the position it reads."""
+
+    def __init__(self):
+        self.n, self.positions = 0, []
+
+    def on_bar(self, ctx, bar):
+        self.positions.append(ctx.position(bar.symbol))
+        if self.n == 0:
+            ctx.target(bar.symbol, -5)
+        elif self.n == 2:
+            ctx.target(bar.symbol, 0)
+        self.n += 1
+
+
+def test_shorts_sell_shares_not_held_and_buy_them_back():
+    strategy = ShortThenCover()
+    result = pyatl.backtest(strategy, {"005930": bars([100, 100, 120, 120])}, cash=1000, shorts=True)
+    assert result.refused["reason"] == []
+    assert list(result.fills["side"]) == ["sell", "buy"]
+    assert list(result.fills["quantity"]) == [5, 5]
+    assert list(result.fills["price"]) == [100, 120]  # bar 1's and bar 3's open
+    assert strategy.positions == [0, -5, -5, 0]  # a fill at a bar's open is held when the strategy sees that bar
+    # The sale's proceeds are cash; the short is marked at the close, so equity falls as the price rises.
+    assert list(result.equity["equity"]) == [1000, 1000, 1000 - 5 * 20, 1000 - 5 * 20]
+    assert float(result.closing_equity) == 1000 - 5 * 20
+
+
+def test_a_short_sale_is_taxed_like_any_sale():
+    result = pyatl.backtest(ShortThenCover(), {"005930": bars([100] * 4)}, sell_tax=0.002, shorts=True)
+    assert list(result.fills["tax"]) == [pytest.approx(1.0), 0]  # 0.2 % of the 500 sold
+    assert result.tax_paid == pytest.approx(1.0)
+
+
+def test_shorts_is_a_bool():
+    with pytest.raises(TypeError):
+        pyatl.backtest(ShortThenCover(), {"005930": bars([100] * 4)}, shorts="yes")
+
+
 def test_a_target_on_the_last_bar_is_left_unfilled():
     result = pyatl.backtest(TargetAt(on=2, off=99, quantity=1), {"005930": bars([100] * 3)})
     assert result.unfilled == 1

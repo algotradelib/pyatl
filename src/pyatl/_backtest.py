@@ -136,6 +136,10 @@ class Replay:
         Price ticks against the order on each fill.
     scale : int
         Decimal places kept when prices and volumes are converted to exact decimals.
+    shorts : bool
+        Whether a target below zero may sell shares not held. Off by default: such a sale is refused as
+        `quantity_not_sellable`. On, the sale fills like any other (taxed by `sell_tax`, its proceeds added to
+        cash) and the position is valued at each bar's close; no borrow, fee, margin or recall is modelled.
 
     Attributes
     ----------
@@ -163,6 +167,7 @@ class Replay:
         sell_tax: float | str | Decimal = 0,
         slippage_ticks: int = 0,
         scale: int = 4,
+        shorts: bool = False,
     ) -> None:
         symbols = list(symbols)
         for symbol in symbols:
@@ -174,6 +179,7 @@ class Replay:
         settings.min_commission = _decimal(min_commission)
         settings.sell_tax = _decimal(sell_tax)
         settings.slippage_ticks = slippage_ticks
+        settings.shorts = shorts
         self._interval, self._stamp, self._scale = interval, stamp, scale
         self._core = _core.Replay(strategy, symbols, settings, interval, stamp)
         self._index = {symbol: i for i, symbol in enumerate(symbols)}
@@ -269,6 +275,7 @@ def backtest(
     sell_tax: float | str | Decimal = 0,
     slippage_ticks: int = 0,
     scale: int = 4,
+    shorts: bool = False,
 ) -> BacktestResult:
     """Replays `data` through `strategy` and returns the result.
 
@@ -300,6 +307,10 @@ def backtest(
         Price ticks against the order on each fill.
     scale : int
         Decimal places kept when prices and volumes are converted to exact decimals.
+    shorts : bool
+        Whether a target below zero may sell shares not held. Off by default: such a sale is refused as
+        `quantity_not_sellable`. On, the sale fills like any other (taxed by `sell_tax`, its proceeds added to
+        cash) and the position is valued at each bar's close; no borrow, fee, margin or recall is modelled.
 
     Returns
     -------
@@ -319,6 +330,7 @@ def backtest(
         sell_tax=sell_tax,
         slippage_ticks=slippage_ticks,
         scale=scale,
+        shorts=shorts,
     )
     replay.feed(data)
     return replay.finish()

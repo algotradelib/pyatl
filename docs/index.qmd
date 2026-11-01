@@ -50,4 +50,5 @@ NumPy is its only Python dependency; the examples read data with pandas, install
 
 Early.
 pyatl backtests Korean (KRX) stocks with target positions in whole shares.
+A position below zero needs `shorts=True`; no borrow is modelled.
 Other markets, limit orders and live trading are not supported yet.
