@@ -5,6 +5,7 @@
 BARS.csv has open, high, low, close, volume, and the time as `time` (any format pandas reads) or `ts`
 (epoch seconds).
 """
+
 import argparse
 from collections import deque
 
@@ -50,9 +51,12 @@ def main():
     frame = pd.read_csv(args.csv)
     frame["time"] = pd.to_datetime(frame["ts"], unit="s") if "ts" in frame else pd.to_datetime(frame["time"])
     result = pyatl.backtest(
-        SmaCross(), {args.symbol: frame}, interval=args.interval,
+        SmaCross(),
+        {args.symbol: frame},
+        interval=args.interval,
         # Commission and tax: a Korean online brokerage's order of magnitude.
-        commission=0.00015, sell_tax=0.002,
+        commission=0.00015,
+        sell_tax=0.002,
     )
     print(f"bars {result.bars}, fills {len(result.fills['side'])}")
     print(f"equity {result.opening_equity} -> {result.closing_equity}")

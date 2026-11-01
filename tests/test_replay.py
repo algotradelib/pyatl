@@ -86,8 +86,15 @@ def test_feeding_in_chunks_or_blocks_equals_backtest(make):
     # Uneven blocks; the cut at row 4 splits 2024-01-03's bars across two calls.
     for lo, hi in ((0, 4), (4, 9), (9, len(table))):
         part = table.iloc[lo:hi]
-        blocks.feed_bars(part["symbol"].to_numpy(), part["time"].to_numpy(), open=part["open"], high=part["high"],
-                         low=part["low"], close=part["close"], volume=part["volume"])
+        blocks.feed_bars(
+            part["symbol"].to_numpy(),
+            part["time"].to_numpy(),
+            open=part["open"],
+            high=part["high"],
+            low=part["low"],
+            close=part["close"],
+            volume=part["volume"],
+        )
     same(whole, blocks.finish())
 
 
@@ -95,18 +102,31 @@ def test_string_and_integer_symbols_are_the_same_and_map_through_the_registry():
     data = {"B": frame([1, 2, 3, 4]), "A": frame([5, 6, 7, 8])}
     table = long_table(data)
     by_name = pyatl.Replay(Rebalance(), ["B", "A"])
-    by_name.feed_bars(table["symbol"].to_numpy(), table["time"].to_numpy(), high=table["high"], low=table["low"],
-                      close=table["close"], volume=table["volume"])
+    by_name.feed_bars(
+        table["symbol"].to_numpy(),
+        table["time"].to_numpy(),
+        high=table["high"],
+        low=table["low"],
+        close=table["close"],
+        volume=table["volume"],
+    )
     by_index = pyatl.Replay(Rebalance(), ["B", "A"])
     codes = np.array([{"B": 0, "A": 1}[s] for s in table["symbol"]])
-    by_index.feed_bars(codes, table["time"].to_numpy(), high=table["high"], low=table["low"], close=table["close"],
-                       volume=table["volume"])
+    by_index.feed_bars(
+        codes,
+        table["time"].to_numpy(),
+        high=table["high"],
+        low=table["low"],
+        close=table["close"],
+        volume=table["volume"],
+    )
     same(by_name.finish(), by_index.finish())
 
     only_a = pyatl.Replay(Rebalance(), ["B", "A"])
     a = data["A"]
-    only_a.feed_bars(np.array(["A"] * len(a)), a.index.to_numpy(), high=a["high"], low=a["low"], close=a["close"],
-                     volume=a["volume"])
+    only_a.feed_bars(
+        np.array(["A"] * len(a)), a.index.to_numpy(), high=a["high"], low=a["low"], close=a["close"], volume=a["volume"]
+    )
     result = only_a.finish()
     assert set(result.fills["symbol"]) == {"A"}
 
@@ -139,8 +159,9 @@ def test_feed_bars_takes_rows_as_given_and_refuses_them_out_of_order():
     f = frame([100, 101, 102]).iloc[[1, 0, 2]]
     replay = pyatl.Replay(Rebalance(), ["005930"])
     with pytest.raises(ValueError, match="not later than its previous bar"):
-        replay.feed_bars(["005930"] * 3, f.index.to_numpy(), high=f["high"], low=f["low"], close=f["close"],
-                         volume=f["volume"])
+        replay.feed_bars(
+            ["005930"] * 3, f.index.to_numpy(), high=f["high"], low=f["low"], close=f["close"], volume=f["volume"]
+        )
 
 
 def test_two_rows_for_the_same_period_are_refused_naming_both():
@@ -153,13 +174,16 @@ def test_two_rows_for_the_same_period_are_refused_naming_both():
 def test_misaligned_symbols_merge_in_time_then_symbol_order():
     # Every symbol on its own minutes: each step feeds one bar of many heads, so the merge falls back to its heap.
     symbols = [f"{i:06d}" for i in range(120)]
-    data = {s: frame(np.arange(1, 61), start=pd.Timestamp("2024-01-02 09:00") + pd.Timedelta(seconds=i), freq="min")
-            for i, s in enumerate(symbols)}
+    data = {
+        s: frame(np.arange(1, 61), start=pd.Timestamp("2024-01-02 09:00") + pd.Timedelta(seconds=i), freq="min")
+        for i, s in enumerate(symbols)
+    }
     strategy = Rebalance()
     pyatl.backtest(strategy, data, interval="1m")
     expected = sorted((t, symbols.index(s)) for s in symbols for t in data[s].index)
-    assert [(pd.Timestamp(t, unit="ns"), symbols.index(s)) for s, t in strategy.seen] == \
-        [(t + pd.Timedelta(minutes=1), i) for t, i in expected]
+    assert [(pd.Timestamp(t, unit="ns"), symbols.index(s)) for s, t in strategy.seen] == [
+        (t + pd.Timedelta(minutes=1), i) for t, i in expected
+    ]
 
 
 def refused_but_usable(replay, call, match):
@@ -175,19 +199,30 @@ def test_refusals_leave_the_replay_usable():
 
     def block(r, f, symbols=None):
         symbols = ["005930"] * len(f) if symbols is None else symbols
-        return lambda: r.feed_bars(symbols, f.index.to_numpy(), high=f["high"], low=f["low"], close=f["close"],
-                                   volume=f["volume"])
+        return lambda: r.feed_bars(
+            symbols, f.index.to_numpy(), high=f["high"], low=f["low"], close=f["close"], volume=f["volume"]
+        )
 
     r = pyatl.Replay(Rebalance(), ["005930"])
     refused_but_usable(r, block(r, f, ["XXXXXX"] * 3), "unknown symbol")
     r = pyatl.Replay(Rebalance(), ["005930"])
     refused_but_usable(r, lambda: r.feed({"XXXXXX": f}), "unknown symbol")
     r = pyatl.Replay(Rebalance(), ["005930"])
-    refused_but_usable(r, lambda: r.feed_bars(np.array([0, 1, 0]), f.index.to_numpy(), high=f["high"], low=f["low"],
-                                               close=f["close"], volume=f["volume"]), "symbol index 1")
+    refused_but_usable(
+        r,
+        lambda: r.feed_bars(
+            np.array([0, 1, 0]), f.index.to_numpy(), high=f["high"], low=f["low"], close=f["close"], volume=f["volume"]
+        ),
+        "symbol index 1",
+    )
     r = pyatl.Replay(Rebalance(), ["005930"])
-    refused_but_usable(r, lambda: r.feed_bars(["005930"] * 2, f.index.to_numpy(), high=f["high"], low=f["low"],
-                                               close=f["close"], volume=f["volume"]), "as many rows")
+    refused_but_usable(
+        r,
+        lambda: r.feed_bars(
+            ["005930"] * 2, f.index.to_numpy(), high=f["high"], low=f["low"], close=f["close"], volume=f["volume"]
+        ),
+        "as many rows",
+    )
     nan_close = f.assign(close=[100.0, np.nan, 102.0])
     r = pyatl.Replay(Rebalance(), ["005930"])
     refused_but_usable(r, block(r, nan_close), "close at row 1")
@@ -209,14 +244,16 @@ def test_a_float_index_array_is_refused_not_cast():
     f = frame([100, 101])
     r = pyatl.Replay(Rebalance(), ["005930"])
     with pytest.raises(TypeError, match="array of int"):
-        r.feed_bars(np.array([0.0, 0.0]), f.index.to_numpy(), high=f["high"], low=f["low"], close=f["close"],
-                    volume=f["volume"])
+        r.feed_bars(
+            np.array([0.0, 0.0]), f.index.to_numpy(), high=f["high"], low=f["low"], close=f["close"], volume=f["volume"]
+        )
 
 
 def test_integer_times_and_non_str_symbols_are_refused():
     with pytest.raises(TypeError, match="datetime64"):
-        pyatl.Replay(Rebalance(), ["005930"]).feed_bars([0], np.array([1]), high=[1.0], low=[1.0], close=[1.0],
-                                                        volume=[1.0])
+        pyatl.Replay(Rebalance(), ["005930"]).feed_bars(
+            [0], np.array([1]), high=[1.0], low=[1.0], close=[1.0], volume=[1.0]
+        )
     with pytest.raises(TypeError, match="a symbol is a str"):
         pyatl.Replay(Rebalance(), [5930])
 
@@ -262,14 +299,17 @@ def test_a_handler_cannot_feed_or_finish_its_own_replay(where, caught):
                     raise
 
     if where == "on_bar":
+
         class S(Reenter):
             def on_bar(self, ctx, bar):
                 self.poke()
     elif where == "on_bars":
+
         class S(Reenter):
             def on_bars(self, ctx, bars):
                 self.poke()
     else:
+
         class S(Reenter):
             def on_bar(self, ctx, bar):
                 pass
@@ -368,6 +408,12 @@ def test_numpy_string_dtype_symbols_are_accepted():
         pytest.skip("NumPy without StringDType")
     f = frame([1, 2, 3, 4])
     by_string_dtype = pyatl.Replay(Rebalance(), ["005930"])
-    by_string_dtype.feed_bars(np.array(["005930"] * 4, dtype=string_dtype()), f.index.to_numpy(), high=f["high"],
-                              low=f["low"], close=f["close"], volume=f["volume"])
+    by_string_dtype.feed_bars(
+        np.array(["005930"] * 4, dtype=string_dtype()),
+        f.index.to_numpy(),
+        high=f["high"],
+        low=f["low"],
+        close=f["close"],
+        volume=f["volume"],
+    )
     same(pyatl.backtest(Rebalance(), {"005930": f}), by_string_dtype.finish())

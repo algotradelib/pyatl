@@ -1,4 +1,5 @@
 """`Replay` and `backtest()`: a Python strategy over bar data, replayed by algotradelib in C++."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
@@ -224,7 +225,13 @@ class Replay:
         n = len(time_ns)
         open_ = np.full(n, np.nan) if open is None else _array(open)
         self._core.feed_bars(
-            self._codes(symbol, n), time_ns, open_, _array(high), _array(low), _array(close), _array(volume),
+            self._codes(symbol, n),
+            time_ns,
+            open_,
+            _array(high),
+            _array(low),
+            _array(close),
+            _array(volume),
             self._scale,
         )
 
@@ -302,8 +309,16 @@ def backtest(
     if not data:
         raise ValueError("no series given")
     replay = Replay(
-        strategy, list(data), interval=interval, stamp=stamp, cash=cash, commission=commission,
-        min_commission=min_commission, sell_tax=sell_tax, slippage_ticks=slippage_ticks, scale=scale,
+        strategy,
+        list(data),
+        interval=interval,
+        stamp=stamp,
+        cash=cash,
+        commission=commission,
+        min_commission=min_commission,
+        sell_tax=sell_tax,
+        slippage_ticks=slippage_ticks,
+        scale=scale,
     )
     replay.feed(data)
     return replay.finish()
@@ -355,6 +370,14 @@ def _series(symbol: str, frame: Any, interval: str, stamp: str, scale: int) -> _
     time_ns = _time_ns(time)
     open_ = _column(frame, "open") if _has(frame, "open") else np.full(len(time_ns), np.nan)
     return _core.make_series(
-        symbol, time_ns, open_, _column(frame, "high"), _column(frame, "low"), _column(frame, "close"),
-        _column(frame, "volume"), interval, stamp, scale,
+        symbol,
+        time_ns,
+        open_,
+        _column(frame, "high"),
+        _column(frame, "low"),
+        _column(frame, "close"),
+        _column(frame, "volume"),
+        interval,
+        stamp,
+        scale,
     )

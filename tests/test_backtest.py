@@ -144,7 +144,10 @@ def test_integer_times_are_refused():
 def test_a_dict_of_arrays_with_a_time_column_works():
     data = {
         "time": np.array(["2024-01-01", "2024-01-02", "2024-01-03"], dtype="datetime64[D]"),
-        "high": [1.0, 2.0, 3.0], "low": [1.0, 2.0, 3.0], "close": [1.0, 2.0, 3.0], "volume": [1.0] * 3,
+        "high": [1.0, 2.0, 3.0],
+        "low": [1.0, 2.0, 3.0],
+        "close": [1.0, 2.0, 3.0],
+        "volume": [1.0] * 3,
     }
     result = pyatl.backtest(TargetAt(0, 99, quantity=1), {"005930": data})
     assert result.bars == 3
@@ -160,8 +163,13 @@ def bars(opens, closes=None, start="2024-01-01"):
     closes = opens if closes is None else closes
     opens, closes = np.asarray(opens, dtype=float), np.asarray(closes, dtype=float)
     return pd.DataFrame(
-        {"open": opens, "high": np.maximum(opens, closes), "low": np.minimum(opens, closes), "close": closes,
-         "volume": np.full(len(opens), 1000.0)},
+        {
+            "open": opens,
+            "high": np.maximum(opens, closes),
+            "low": np.minimum(opens, closes),
+            "close": closes,
+            "volume": np.full(len(opens), 1000.0),
+        },
         index=pd.date_range(start, periods=len(opens), freq="D"),
     )
 
@@ -182,8 +190,9 @@ def test_slippage_is_per_share_one_tick_and_already_in_the_price():
 
 
 def test_commission_paid_is_the_sum_of_the_fills():
-    result = pyatl.backtest(TargetAt(on=0, off=2, quantity=100), {"005930": bars([12000, 12100, 12200, 12300])},
-                            commission=0.00015)
+    result = pyatl.backtest(
+        TargetAt(on=0, off=2, quantity=100), {"005930": bars([12000, 12100, 12200, 12300])}, commission=0.00015
+    )
     assert result.commission_paid == pytest.approx(float(np.sum(result.fills["commission"])))
 
 
@@ -237,16 +246,28 @@ def test_sortino_and_turnover_come_from_the_library():
 def test_costs_are_reported_even_with_no_equity_point():
     # One bar each; the order fills on 000660's bar of the same period, whose equity does not fit an exact decimal.
     def one_bar(close):
-        return {"time": np.array(["2024-01-01"], dtype="datetime64[D]"), "open": [70000], "high": [max(70000, close)],
-                    "low": [min(70000, close)], "close": [close], "volume": [1000]}
+        return {
+            "time": np.array(["2024-01-01"], dtype="datetime64[D]"),
+            "open": [70000],
+            "high": [max(70000, close)],
+            "low": [min(70000, close)],
+            "close": [close],
+            "volume": [1000],
+        }
 
     class Cross:
         def on_bar(self, ctx, bar):
             if bar.symbol == "005930":
                 ctx.target("000660", 2)
 
-    result = pyatl.backtest(Cross(), {"005930": one_bar(70000), "000660": one_bar(1_000_000)},
-                            cash="9223372036854000000", scale=0, commission="0.001", slippage_ticks=1)
+    result = pyatl.backtest(
+        Cross(),
+        {"005930": one_bar(70000), "000660": one_bar(1_000_000)},
+        cash="9223372036854000000",
+        scale=0,
+        commission="0.001",
+        slippage_ticks=1,
+    )
     assert len(result.equity["equity"]) == 0 and result.unvalued_bars == 1
     assert len(result.fills["time"]) == 1
     assert result.commission_paid == pytest.approx(float(result.fills["commission"][0]))
@@ -281,8 +302,9 @@ def test_a_polars_frame_works_and_its_time_zone_is_read_as_utc():
             self.times.append(bar.time)
 
     prices = {"open": [1.0, 2.0], "high": [1.0, 2.0], "low": [1.0, 2.0], "close": [1.0, 2.0], "volume": [1.0, 1.0]}
-    naive = pl.DataFrame({"time": pl.datetime_range(pl.datetime(2024, 1, 1), pl.datetime(2024, 1, 2), "1d", eager=True),
-                          **prices})
+    naive = pl.DataFrame(
+        {"time": pl.datetime_range(pl.datetime(2024, 1, 1), pl.datetime(2024, 1, 2), "1d", eager=True), **prices}
+    )
     seoul = naive.with_columns(pl.col("time").dt.replace_time_zone("Asia/Seoul"))
     plain, zoned = Times(), Times()
     assert pyatl.backtest(plain, {"005930": naive}, stamp="close").bars == 2

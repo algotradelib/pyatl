@@ -32,10 +32,13 @@ def test_every_public_name_is_documented(name):
         assert "Attributes\n----------" in doc, name
 
 
-@pytest.mark.parametrize("cls, members", [
-    (pyatl.Bar, ["symbol", "time", "open", "high", "low", "close", "volume"]),
-    (pyatl.Context, ["now", "target", "position", "cash"]),
-])
+@pytest.mark.parametrize(
+    "cls, members",
+    [
+        (pyatl.Bar, ["symbol", "time", "open", "high", "low", "close", "volume"]),
+        (pyatl.Context, ["now", "target", "position", "cash"]),
+    ],
+)
 def test_every_binding_member_is_documented(cls, members):
     for member in members:
         assert (inspect.getdoc(getattr(cls, member)) or "").strip(), f"{cls.__name__}.{member}"
@@ -64,8 +67,10 @@ def test_the_old_module_path_still_imports_and_unpickles():
         def on_bar(self, ctx, bar):
             ctx.target(bar.symbol, 1)
 
-    frame = pd.DataFrame({"open": [1.0, 2.0], "high": [1.0, 2.0], "low": [1.0, 2.0], "close": [1.0, 2.0],
-                          "volume": [1.0, 1.0]}, index=pd.date_range("2024-01-01", periods=2))
+    frame = pd.DataFrame(
+        {"open": [1.0, 2.0], "high": [1.0, 2.0], "low": [1.0, 2.0], "close": [1.0, 2.0], "volume": [1.0, 1.0]},
+        index=pd.date_range("2024-01-01", periods=2),
+    )
     result = pyatl.backtest(Hold(), {"005930": frame})
     # A pickle names the class's module; one made when the class lived in pyatl.backtest names that path.
     old = pickle.dumps(result, protocol=0).replace(b"pyatl._backtest", b"pyatl.backtest")

@@ -15,9 +15,11 @@ You write the strategy in Python; the replay, the fills and the costs run in C++
 import pandas as pd
 import pyatl
 
+
 class Hold:
     def on_bar(self, ctx, bar):
         ctx.target(bar.symbol, 10)  # hold 10 shares, bought at the next bar's open
+
 
 frame = pd.read_csv("bars.csv", parse_dates=["time"])
 result = pyatl.backtest(Hold(), {"005930": frame}, commission=0.00015, sell_tax=0.002)

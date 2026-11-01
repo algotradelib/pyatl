@@ -8,6 +8,7 @@ A strategy is any object with `on_bar(ctx, bar)` or `on_bars(ctx, bars)`; it nee
 
     result = pyatl.backtest(Hold(), {"005930": frame})
 """
+
 import sys as _sys
 from importlib.metadata import version as _version
 
