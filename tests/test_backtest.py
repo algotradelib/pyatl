@@ -242,6 +242,24 @@ def test_shorts_sell_shares_not_held_and_buy_them_back():
     assert float(result.closing_equity) == 1000 - 5 * 20
 
 
+def test_a_long_position_goes_short_in_one_sale():
+    class LongThenShort:
+        def __init__(self):
+            self.n, self.positions = 0, []
+
+        def on_bar(self, ctx, bar):
+            self.positions.append(ctx.position(bar.symbol))
+            ctx.target(bar.symbol, 10 if self.n == 0 else -5)
+            self.n += 1
+
+    strategy = LongThenShort()
+    result = pyatl.backtest(strategy, {"005930": bars([100] * 4)}, shorts=True)
+    assert list(result.fills["side"]) == ["buy", "sell"]
+    assert list(result.fills["quantity"]) == [10, 15]
+    assert strategy.positions == [0, 10, -5, -5]
+    assert result.refused["reason"] == []
+
+
 def test_a_short_sale_is_taxed_like_any_sale():
     result = pyatl.backtest(ShortThenCover(), {"005930": bars([100] * 4)}, sell_tax=0.002, shorts=True)
     assert list(result.fills["tax"]) == [pytest.approx(1.0), 0]  # 0.2 % of the 500 sold

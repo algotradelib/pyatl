@@ -66,11 +66,13 @@ class BacktestResult:
         computing measures from `equity` per period.
     lowest_cash : float
         The lowest cash (KRW) an execution left, if an execution took cash below zero; NaN otherwise, which
-        includes a run that started below zero and executed nothing.
+        includes a run that started below zero and executed nothing. Short sale proceeds count as cash, so
+        leverage through shorts does not show here (see `shorts`).
     aborted : int
         Orders cleared when the replay halted, apart from `unfilled`.
     overdrawn_bars : int
-        Input bars that ended with cash below zero (with several symbols, one per symbol's bar).
+        Input bars that ended with cash below zero (with several symbols, one per symbol's bar); short sale
+        proceeds count as cash, as for `lowest_cash`.
     unchecked_fill_causality : int
         Decisions to fill an order against a bar that the engine could not check were made before that bar
         (for example with weekly, monthly or yearly bars stamped at their close). Counted when the order is
@@ -140,6 +142,8 @@ class Replay:
         Whether a target below zero may sell shares not held. Off by default: such a sale is refused as
         `quantity_not_sellable`. On, the sale fills like any other (taxed by `sell_tax`, its proceeds added to
         cash) and the position is valued at each bar's close; no borrow, fee, margin or recall is modelled.
+        Since the proceeds count as cash, `ctx.cash()` includes them and a run levered through shorts shows
+        no `lowest_cash` or `overdrawn_bars`.
 
     Attributes
     ----------
@@ -311,6 +315,8 @@ def backtest(
         Whether a target below zero may sell shares not held. Off by default: such a sale is refused as
         `quantity_not_sellable`. On, the sale fills like any other (taxed by `sell_tax`, its proceeds added to
         cash) and the position is valued at each bar's close; no borrow, fee, margin or recall is modelled.
+        Since the proceeds count as cash, `ctx.cash()` includes them and a run levered through shorts shows
+        no `lowest_cash` or `overdrawn_bars`.
 
     Returns
     -------

@@ -61,7 +61,8 @@ void pyatl::bind_types(nb::module_& m) {
       "symbol : str\n"
       "    One of the replay's symbols.\n"
       "quantity : int\n"
-      "    The shares to hold; 0 closes the position.\n\n"
+      "    The shares to hold; 0 closes the position. Below zero is a short position, refused\n"
+      "    (`quantity_not_sellable`) unless the replay was made with `shorts=True`.\n\n"
       "Raises\n"
       "------\n"
       "ValueError\n"
@@ -77,7 +78,7 @@ void pyatl::bind_types(nb::module_& m) {
       "Returns\n"
       "-------\n"
       "float\n"
-      "    Shares held, 0 when none.\n"
+      "    Shares held, 0 when none, negative for a short.\n"
     )
     .def(
       "cash", &Context::cash,
@@ -85,6 +86,6 @@ void pyatl::bind_types(nb::module_& m) {
       "Returns\n"
       "-------\n"
       "float or None\n"
-      "    The cash, or None if none is recorded.\n"
+      "    The cash, or None if none is recorded; it includes short sale proceeds.\n"
     );
 }
