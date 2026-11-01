@@ -2,3 +2,6 @@
 
 # style: format every file with clang-format
 07a0780add90a8e229aeb24af63084c795194bef
+
+# style: format the Python with ruff
+5535a4696e6e7c6113db82ac585a140fc6a65bbf
