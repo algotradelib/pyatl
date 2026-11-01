@@ -1,9 +1,10 @@
 """`Replay` and `backtest()`: a Python strategy over bar data, replayed by algotradelib in C++."""
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 import numpy as np
 

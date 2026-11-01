@@ -157,7 +157,7 @@ def test_misaligned_symbols_merge_in_time_then_symbol_order():
             for i, s in enumerate(symbols)}
     strategy = Rebalance()
     pyatl.backtest(strategy, data, interval="1m")
-    expected = sorted(((t, symbols.index(s)) for s in symbols for t in data[s].index))
+    expected = sorted((t, symbols.index(s)) for s in symbols for t in data[s].index)
     assert [(pd.Timestamp(t, unit="ns"), symbols.index(s)) for s, t in strategy.seen] == \
         [(t + pd.Timedelta(minutes=1), i) for t, i in expected]
 

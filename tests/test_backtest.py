@@ -237,8 +237,8 @@ def test_sortino_and_turnover_come_from_the_library():
 def test_costs_are_reported_even_with_no_equity_point():
     # One bar each; the order fills on 000660's bar of the same period, whose equity does not fit an exact decimal.
     def one_bar(close):
-        return dict(time=np.array(["2024-01-01"], dtype="datetime64[D]"), open=[70000], high=[max(70000, close)],
-                    low=[min(70000, close)], close=[close], volume=[1000])
+        return {"time": np.array(["2024-01-01"], dtype="datetime64[D]"), "open": [70000], "high": [max(70000, close)],
+                    "low": [min(70000, close)], "close": [close], "volume": [1000]}
 
     class Cross:
         def on_bar(self, ctx, bar):
@@ -345,7 +345,8 @@ def test_equity_at_or_below_zero_before_the_end_leaves_no_sharpe():
     assert math.isnan(returns[below[0] + 1])  # no return after a point at or below zero
     assert math.isnan(result.sharpe) and math.isnan(result.sortino)
     valid = returns[~np.isnan(returns)]
-    assert math.isfinite(valid.mean() / valid.std(ddof=1))  # the remaining returns would give a ratio; the library gives none
+    # The remaining returns would give a ratio; the library gives none.
+    assert math.isfinite(valid.mean() / valid.std(ddof=1))
 
 
 def test_orders_cleared_by_a_halt_are_counted_as_aborted():

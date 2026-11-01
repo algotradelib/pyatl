@@ -51,7 +51,8 @@ def main():
     frame["time"] = pd.to_datetime(frame["ts"], unit="s") if "ts" in frame else pd.to_datetime(frame["time"])
     result = pyatl.backtest(
         SmaCross(), {args.symbol: frame}, interval=args.interval,
-        commission=0.00015, sell_tax=0.002,  # a Korean online brokerage's order of magnitude
+        # Commission and tax: a Korean online brokerage's order of magnitude.
+        commission=0.00015, sell_tax=0.002,
     )
     print(f"bars {result.bars}, fills {len(result.fills['side'])}")
     print(f"equity {result.opening_equity} -> {result.closing_equity}")

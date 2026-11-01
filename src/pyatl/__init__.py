@@ -22,4 +22,12 @@ from ._core import Bar, Context
 _sys.modules[__name__ + ".backtest"] = _backtest
 
 __version__ = _version("pyatl")
-__all__ = ["Bar", "Context", "BacktestResult", "Replay", "backtest", "algotradelib_version", "__version__"]
+__all__ = [
+    "BacktestResult",
+    "Bar",
+    "Context",
+    "Replay",
+    "__version__",
+    "algotradelib_version",
+    "backtest",
+]

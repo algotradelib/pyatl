@@ -45,7 +45,7 @@ def test_every_binding_member_is_documented(cls, members):
 def test_the_extension_links_only_system_libraries_on_macos():
     listing = subprocess.run(["otool", "-L", _core.__file__], capture_output=True, text=True, check=True).stdout
     libraries = [line.split()[0] for line in listing.splitlines()[1:] if line.strip()]
-    assert libraries and all(lib.startswith("/usr/lib/") or lib.startswith("/System/") for lib in libraries), libraries
+    assert libraries and all(lib.startswith(("/usr/lib/", "/System/")) for lib in libraries), libraries
 
 
 def test_the_old_module_path_still_imports_and_unpickles():
