@@ -158,8 +158,9 @@ class Replay:
         optimistic, since a real order cannot trade at a close already seen. After a gap in the symbol's data
         that close can be days old; with no close seen yet, the order fills at the next bar's open. "next-close"
         is that bar's close: the price basis of backtests that fill on the next bar's close, a price convention,
-        not a simulation of a closing order. It prices bars of a day or less: an order on a weekly or
-        longer bar halts the replay, with the reason in `halted`.
+        not a simulation of a closing order, and a bar stamped at its close is taken at that instant. It prices
+        bars of a day or less: an order that would fill on a weekly or longer bar halts the replay, with the
+        reason in `halted`; receiving such bars alone does not.
         `market_price_rule` and `market_fills_by_rule` in the result name the rule and count its fills.
 
     Attributes
@@ -344,8 +345,9 @@ def backtest(
         optimistic, since a real order cannot trade at a close already seen. After a gap in the symbol's data
         that close can be days old; with no close seen yet, the order fills at the next bar's open. "next-close"
         is that bar's close: the price basis of backtests that fill on the next bar's close, a price convention,
-        not a simulation of a closing order. It prices bars of a day or less: an order on a weekly or
-        longer bar halts the replay, with the reason in `halted`.
+        not a simulation of a closing order, and a bar stamped at its close is taken at that instant. It prices
+        bars of a day or less: an order that would fill on a weekly or longer bar halts the replay, with the
+        reason in `halted`; receiving such bars alone does not.
         `market_price_rule` and `market_fills_by_rule` in the result name the rule and count its fills.
 
     Returns
