@@ -7,6 +7,7 @@ title: "Get started"
 A strategy is any object with `on_bar(ctx, bar)` (one bar at a time) or `on_bars(ctx, bars)` (every symbol's bar for a period at once), and optionally `on_stop(ctx)`.
 `ctx.target(symbol, quantity)` states how many shares to hold; the order fills at the next bar's open.
 With `fill="decision-close"` it fills at the symbol's last close when the target was set instead, the convention of backtests that trade on the close; that is optimistic, since a real order cannot trade at a close already seen.
+With `fill="next-close"` it fills at the next bar's close instead; that prices daily or shorter bars, and an order on a weekly or longer bar halts the replay.
 
 ```{python}
 import numpy as np

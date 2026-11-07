@@ -69,6 +69,7 @@ The time is a `time` column or a pandas `DatetimeIndex`, as datetime64; integer 
 A target's orders fill at the next bar's open.
 `fill="decision-close"` fills them at the symbol's last close when the target was set instead, the convention of backtests that trade on the close.
 It is optimistic: a real order cannot trade at a close already seen.
+`fill="next-close"` fills them at the next bar's close instead; it prices daily or shorter bars, and an order on a weekly or longer bar halts the replay.
 
 ## Feeding a replay yourself
 
