@@ -78,7 +78,7 @@ class BacktestResult:
         (for example with weekly, monthly or yearly bars stamped at their close). Counted when the order is
         matched to the bar, before it is priced, so it is not a count of fills.
     market_price_rule : str
-        The rule market orders were priced by: "decision-close" when the replay was made with
+        The configured market-price rule: "decision-close" when the replay was made with
         `fill="decision-close"`, empty under the default (the next bar's open).
     market_fills_by_rule : int
         Fills that rule priced; 0 under the default.
@@ -152,7 +152,7 @@ class Replay:
         close; no borrow, fee, margin or recall is modelled. Since the proceeds count as cash, `ctx.cash()`
         includes them, and leverage through shorts does not show in `lowest_cash` or `overdrawn_bars`.
     fill : str
-        The price a target's orders fill at, on the next bar of that symbol and stamped at its period end either way.
+        The price a target's orders fill at, on the next eligible bar of that symbol, stamped at its period end.
         "next-open" (the default) is that bar's open. "decision-close" is the symbol's last observed close when
         the target was set, before slippage: the convention of backtests that trade on the close. It is
         optimistic, since a real order cannot trade at a close already seen. After a gap in the symbol's data
@@ -335,7 +335,7 @@ def backtest(
         close; no borrow, fee, margin or recall is modelled. Since the proceeds count as cash, `ctx.cash()`
         includes them, and leverage through shorts does not show in `lowest_cash` or `overdrawn_bars`.
     fill : str
-        The price a target's orders fill at, on the next bar of that symbol and stamped at its period end either way.
+        The price a target's orders fill at, on the next eligible bar of that symbol, stamped at its period end.
         "next-open" (the default) is that bar's open. "decision-close" is the symbol's last observed close when
         the target was set, before slippage: the convention of backtests that trade on the close. It is
         optimistic, since a real order cannot trade at a close already seen. After a gap in the symbol's data
