@@ -73,6 +73,8 @@ nb::dict to_dict(Result r) {
   d["overdrawn_bars"] = r.overdrawn_bars;
   d["unchecked_fill_causality"] = r.unchecked_fill_causality;
   d["lowest_cash"] = r.lowest_cash;
+  d["market_price_rule"] = r.market_price_rule;
+  d["market_fills_by_rule"] = r.market_fills_by_rule;
   return d;
 }
 

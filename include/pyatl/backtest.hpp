@@ -39,7 +39,20 @@ struct Result {
   std::vector<double> refused_limit, refused_attempted;
   std::size_t unfilled{0}, gaps{0}, unvalued_bars{0}, aborted{0}, overdrawn_bars{0}, unchecked_fill_causality{0};
   double lowest_cash{NAN};
+  std::string market_price_rule;
+  std::size_t market_fills_by_rule{0};
 };
+
+/** The library's market-price preset named by `Settings::fill`. */
+inline atl::backtest::MarketPrice parse_fill(const std::string& text) {
+  if (text == "next-open") {
+    return atl::backtest::MarketPrice::NEXT_OPEN;
+  }
+  if (text == "decision-close") {
+    return atl::backtest::MarketPrice::DECISION_CLOSE;
+  }
+  throw std::invalid_argument("unknown fill '" + text + "' (next-open, decision-close)");
+}
 
 inline double to_double_or_nan(const std::optional<atl::Decimal64>& value) {
   return value ? to_double(*value) : NAN;
@@ -90,6 +103,8 @@ Result result_of(const Engine& engine, atl::BarInterval interval) {
   out.aborted = result.aborted_;
   out.overdrawn_bars = result.overdrawn_bars_;
   out.unchecked_fill_causality = result.unchecked_fill_causality_;
+  out.market_price_rule = result.market_price_rule_;
+  out.market_fills_by_rule = result.market_fills_by_rule_;
   if (result.lowest_cash_) {
     out.lowest_cash = to_double(result.lowest_cash_->amount_);
   }
@@ -191,7 +206,8 @@ public:
         ),
         atl::backtest::SlippageModel::of_ticks(settings.slippage_ticks)
       )
-        .with_sell_tax(atl::backtest::SellTax{atl::Decimal64::parse(settings.sell_tax), market::country});
+        .with_sell_tax(atl::backtest::SellTax{atl::Decimal64::parse(settings.sell_tax), market::country})
+        .with_market_price(parse_fill(settings.fill));
 
     handlers_ = std::make_unique<Handlers>(strategy, ids_, market::currency());
     const bool bar = !handlers_->on_bar.is_none(), bars = !handlers_->on_bars.is_none();

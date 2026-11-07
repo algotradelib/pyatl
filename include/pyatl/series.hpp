@@ -65,7 +65,7 @@ struct Series {
   std::vector<TimePoint> ends; // bar_period_end of each bar, increasing
 };
 
-/** Costs and starting cash, as decimal strings (exact). */
+/** Costs and starting cash, as decimal strings (exact), and the market-order price rule by name. */
 struct Settings {
   std::string cash{"100000000"};
   std::string commission{"0"};
@@ -73,6 +73,7 @@ struct Settings {
   std::string sell_tax{"0"};
   int slippage_ticks{0};
   bool shorts{false};
+  std::string fill{"next-open"}; // parsed where the engine is included (backtest.hpp)
 };
 
 inline atl::BarInterval parse_interval(const std::string& text) {

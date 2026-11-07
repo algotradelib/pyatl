@@ -1,4 +1,5 @@
 import math
+import re
 
 import numpy as np
 import pandas as pd
@@ -271,6 +272,78 @@ def test_a_short_sale_is_taxed_like_any_sale():
 def test_shorts_is_a_bool():
     with pytest.raises(TypeError):
         pyatl.backtest(ShortThenCover(), {"005930": bars([100] * 4)}, shorts="yes")
+
+
+# Every price distinct, so a reversed mapping or an ignored keyword shows.
+OPENS, CLOSES = [100, 111, 122, 133], [105, 116, 127, 138]
+
+
+def test_decision_close_fills_at_the_close_the_target_was_set_on():
+    data = {"005930": bars(OPENS, CLOSES)}
+    default = pyatl.backtest(TargetAt(on=0, off=2), data)
+    preset = pyatl.backtest(TargetAt(on=0, off=2), data, fill="decision-close")
+    assert list(default.fills["price"]) == [111, 133]  # bar 1's and bar 3's open
+    assert list(preset.fills["price"]) == [105, 127]  # bar 0's and bar 2's close
+    assert list(preset.fills["time"]) == list(default.fills["time"])  # still the next bar's period end
+    assert (default.market_price_rule, default.market_fills_by_rule) == ("", 0)
+    assert (preset.market_price_rule, preset.market_fills_by_rule) == ("decision-close", 2)
+    explicit = pyatl.backtest(TargetAt(on=0, off=2), data, fill="next-open")
+    assert list(explicit.fills["price"]) == [111, 133] and explicit.market_price_rule == ""
+
+
+def test_decision_close_after_a_gap_takes_the_symbols_last_close():
+    # 000660 has no bar on day 1; its target is set from 005930's bar that day.
+    class FromOther:
+        def __init__(self):
+            self.n = 0
+
+        def on_bar(self, ctx, bar):
+            if bar.symbol == "005930":
+                if self.n == 1:
+                    ctx.target("000660", 10)
+                self.n += 1
+
+    gapped = bars([200, 300, 310], [210, 305, 315])
+    gapped.index = pd.to_datetime(["2024-01-01", "2024-01-03", "2024-01-04"])
+    data = {"005930": bars(OPENS, CLOSES), "000660": gapped}
+    default = pyatl.backtest(FromOther(), data)
+    preset = pyatl.backtest(FromOther(), data, fill="decision-close")
+    assert list(default.fills["price"]) == [300]  # day 2's open
+    assert list(preset.fills["price"]) == [210]  # day 0's close, outside day 2's range
+    assert list(preset.fills["time"]) == list(default.fills["time"])
+
+
+def test_decision_close_with_no_close_seen_fills_at_the_open_and_the_last_bar_stays_unfilled():
+    # 000660 starts on day 1; its target is set from 005930's bar on day 0, and 005930's own on its last bar.
+    class Early:
+        def __init__(self):
+            self.n = 0
+
+        def on_bar(self, ctx, bar):
+            if bar.symbol == "005930":
+                if self.n == 0:
+                    ctx.target("000660", 10)
+                elif self.n == 3:
+                    ctx.target("005930", 10)
+                self.n += 1
+
+    late = bars([200, 300, 310], [210, 305, 315], start="2024-01-02")
+    result = pyatl.backtest(Early(), {"005930": bars(OPENS, CLOSES), "000660": late}, fill="decision-close")
+    assert list(result.fills["symbol"]) == ["000660"]
+    assert list(result.fills["price"]) == [200]  # day 1's open: no close of 000660 was known
+    assert result.market_fills_by_rule == 1
+    assert result.unfilled == 1
+
+
+@pytest.mark.parametrize("fill", ["next-close", "NEXT-OPEN", "decision_close", ""])
+def test_an_unknown_fill_is_refused(fill):
+    with pytest.raises(ValueError, match=re.escape(f"unknown fill '{fill}' (next-open, decision-close)")):
+        pyatl.backtest(TargetAt(on=0, off=2), {"005930": bars(OPENS, CLOSES)}, fill=fill)
+
+
+def test_fill_is_a_str():
+    with pytest.raises(TypeError):
+        pyatl.backtest(TargetAt(on=0, off=2), {"005930": bars(OPENS, CLOSES)}, fill=None)
 
 
 def test_a_target_on_the_last_bar_is_left_unfilled():

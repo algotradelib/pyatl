@@ -58,5 +58,6 @@ void pyatl::bind_series(nb::module_& m) {
     .def_rw("min_commission", &Settings::min_commission)
     .def_rw("sell_tax", &Settings::sell_tax)
     .def_rw("slippage_ticks", &Settings::slippage_ticks)
-    .def_rw("shorts", &Settings::shorts);
+    .def_rw("shorts", &Settings::shorts)
+    .def_rw("fill", &Settings::fill);
 }

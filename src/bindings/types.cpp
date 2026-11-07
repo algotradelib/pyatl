@@ -55,7 +55,8 @@ void pyatl::bind_types(nb::module_& m) {
       "target", &Context::target, "symbol"_a, "quantity"_a,
       "Hold a number of shares of a symbol.\n\n"
       "The runner sends the orders the difference from the current position and working orders needs; a\n"
-      "target set at a bar's close fills at the next bar's open.\n\n"
+      "target set at a bar's close fills at the next bar's open (with `fill=\"decision-close\"`, at the\n"
+      "symbol's last observed close when the target was set).\n\n"
       "Parameters\n"
       "----------\n"
       "symbol : str\n"

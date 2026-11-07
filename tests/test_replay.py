@@ -95,6 +95,21 @@ def test_shorts_reach_a_replay_fed_in_parts():
     assert set(default.refused["reason"]) == {"quantity_not_sellable"}
 
 
+@pytest.mark.parametrize(("make", "decided"), [(Rebalance, [1, 3]), (RebalanceBars, [1, 2, 3, 4])])
+def test_decision_close_reaches_a_replay_fed_in_parts(make, decided):
+    closes = np.array([105, 116, 127, 138, 149, 150], dtype=float)
+    f = frame(closes)
+    f["open"] = closes - 5  # every open differs from every close
+    f["low"] = f["open"]
+    replay = pyatl.Replay(make(), ["005930"], fill="decision-close")
+    replay.feed({"005930": f.iloc[:3]})
+    replay.feed({"005930": f.iloc[3:]})
+    result = replay.finish()
+    assert list(result.fills["price"]) == list(closes[decided])
+    assert result.market_price_rule == "decision-close"
+    assert result.market_fills_by_rule == len(decided)
+
+
 @pytest.mark.parametrize("make", [Rebalance, RebalanceBars])
 def test_feeding_in_chunks_or_blocks_equals_backtest(make):
     whole = pyatl.backtest(make(), DATA)
