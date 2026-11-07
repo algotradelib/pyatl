@@ -66,6 +66,10 @@ Both are valid only during the call; keep the numbers, not the objects.
 The time is a `time` column or a pandas `DatetimeIndex`, as datetime64; integer times are refused.
 [`examples/sma_crossover.py`](examples/sma_crossover.py) is a complete strategy.
 
+A target's orders fill at the next bar's open.
+`fill="decision-close"` fills them at the symbol's last close when the target was set instead, the convention of backtests that trade on the close.
+It is optimistic: a real order cannot trade at a close already seen.
+
 ## Feeding a replay yourself
 
 `backtest()` replays the bars you give it in time order.
