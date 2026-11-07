@@ -78,8 +78,8 @@ class BacktestResult:
         (for example with weekly, monthly or yearly bars stamped at their close). Counted when the order is
         matched to the bar, before it is priced, so it is not a count of fills.
     market_price_rule : str
-        The configured market-price rule: "decision-close" when the replay was made with
-        `fill="decision-close"`, empty under the default (the next bar's open).
+        The configured market-price rule: "decision-close" or "next-close" when the replay was made with that
+        `fill`, empty under the default (the next bar's open).
     market_fills_by_rule : int
         Fills that rule priced; 0 under the default.
     """
@@ -156,7 +156,10 @@ class Replay:
         "next-open" (the default) is that bar's open. "decision-close" is the symbol's last observed close when
         the target was set, before slippage: the convention of backtests that trade on the close. It is
         optimistic, since a real order cannot trade at a close already seen. After a gap in the symbol's data
-        that close can be days old; with no close seen yet, the order fills at the next bar's open.
+        that close can be days old; with no close seen yet, the order fills at the next bar's open. "next-close"
+        is that bar's close: the price basis of backtests that fill on the next bar's close, a price convention,
+        not a simulation of a closing order. It prices bars of a day or less: an order on a weekly or
+        longer bar halts the replay, with the reason in `halted`.
         `market_price_rule` and `market_fills_by_rule` in the result name the rule and count its fills.
 
     Attributes
@@ -339,7 +342,10 @@ def backtest(
         "next-open" (the default) is that bar's open. "decision-close" is the symbol's last observed close when
         the target was set, before slippage: the convention of backtests that trade on the close. It is
         optimistic, since a real order cannot trade at a close already seen. After a gap in the symbol's data
-        that close can be days old; with no close seen yet, the order fills at the next bar's open.
+        that close can be days old; with no close seen yet, the order fills at the next bar's open. "next-close"
+        is that bar's close: the price basis of backtests that fill on the next bar's close, a price convention,
+        not a simulation of a closing order. It prices bars of a day or less: an order on a weekly or
+        longer bar halts the replay, with the reason in `halted`.
         `market_price_rule` and `market_fills_by_rule` in the result name the rule and count its fills.
 
     Returns

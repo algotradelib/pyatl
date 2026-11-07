@@ -335,9 +335,31 @@ def test_decision_close_with_no_close_seen_fills_at_the_open_and_the_last_bar_st
     assert result.unfilled == 1
 
 
-@pytest.mark.parametrize("fill", ["next-close", "NEXT-OPEN", "decision_close", ""])
+def test_next_close_fills_at_the_next_bars_close():
+    data = {"005930": bars(OPENS, CLOSES)}
+    default = pyatl.backtest(TargetAt(on=0, off=2), data)
+    preset = pyatl.backtest(TargetAt(on=0, off=2), data, fill="next-close")
+    assert list(preset.fills["price"]) == [116, 138]  # bar 1's and bar 3's close
+    assert list(preset.fills["time"]) == list(default.fills["time"])  # still the next bar's period end
+    assert (preset.market_price_rule, preset.market_fills_by_rule) == ("next-close", 2)
+    assert preset.halted is None
+
+
+def test_next_close_on_a_weekly_bar_halts_without_a_fill():
+    weekly = bars(OPENS, CLOSES)
+    weekly.index = pd.date_range("2024-01-01", periods=4, freq="W-MON")
+    result = pyatl.backtest(TargetAt(on=0, off=2), {"005930": weekly}, interval="1w", fill="next-close")
+    assert result.halted is not None and "'next-close'" in result.halted and "weekly" in result.halted
+    assert len(result.fills["price"]) == 0
+    assert result.market_fills_by_rule == 0
+    assert float(result.closing_equity) == 100_000_000
+    assert pyatl.backtest(TargetAt(on=0, off=2), {"005930": weekly}, interval="1w").halted is None
+
+
+@pytest.mark.parametrize("fill", ["NEXT-CLOSE", "next_close", "NEXT-OPEN", "decision_close", ""])
 def test_an_unknown_fill_is_refused(fill):
-    with pytest.raises(ValueError, match=re.escape(f"unknown fill '{fill}' (next-open, decision-close)")):
+    message = f"unknown fill '{fill}' (next-open, decision-close, next-close)"
+    with pytest.raises(ValueError, match=re.escape(message)):
         pyatl.backtest(TargetAt(on=0, off=2), {"005930": bars(OPENS, CLOSES)}, fill=fill)
 
 

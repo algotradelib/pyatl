@@ -110,6 +110,33 @@ def test_decision_close_reaches_a_replay_fed_in_parts(make, decided):
     assert result.market_fills_by_rule == len(decided)
 
 
+@pytest.mark.parametrize(("make", "decided"), [(Rebalance, [1, 3]), (RebalanceBars, [1, 2, 3, 4])])
+def test_next_close_reaches_a_replay_fed_in_parts(make, decided):
+    closes = np.array([105, 116, 127, 138, 149, 150], dtype=float)
+    f = frame(closes)
+    f["open"] = closes - 5  # every open differs from every close
+    f["low"] = f["open"]
+    replay = pyatl.Replay(make(), ["005930"], fill="next-close")
+    replay.feed({"005930": f.iloc[:3]})
+    replay.feed({"005930": f.iloc[3:]})
+    result = replay.finish()
+    assert list(result.fills["price"]) == list(closes[[d + 1 for d in decided]])  # the next bar's close
+    assert result.market_price_rule == "next-close"
+    assert result.market_fills_by_rule == len(decided)
+
+
+def test_next_close_on_a_weekly_bar_halts_a_replay():
+    weekly = frame([100, 110, 120, 130], freq="W-MON")
+    weekly["open"] = weekly["close"] - 5
+    weekly["low"] = weekly["open"]
+    replay = pyatl.Replay(Rebalance(), ["005930"], interval="1w", fill="next-close")
+    replay.feed({"005930": weekly})
+    result = replay.finish()
+    assert result.halted is not None and "'next-close'" in result.halted and "weekly" in result.halted
+    assert len(result.fills["price"]) == 0
+    assert float(result.closing_equity) == 100_000_000
+
+
 @pytest.mark.parametrize("make", [Rebalance, RebalanceBars])
 def test_feeding_in_chunks_or_blocks_equals_backtest(make):
     whole = pyatl.backtest(make(), DATA)

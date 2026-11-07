@@ -51,7 +51,10 @@ inline atl::backtest::MarketPrice parse_fill(const std::string& text) {
   if (text == "decision-close") {
     return atl::backtest::MarketPrice::DECISION_CLOSE;
   }
-  throw std::invalid_argument("unknown fill '" + text + "' (next-open, decision-close)");
+  if (text == "next-close") {
+    return atl::backtest::MarketPrice::NEXT_CLOSE;
+  }
+  throw std::invalid_argument("unknown fill '" + text + "' (next-open, decision-close, next-close)");
 }
 
 inline double to_double_or_nan(const std::optional<atl::Decimal64>& value) {
