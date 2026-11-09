@@ -15,6 +15,12 @@
 #include <string>
 #include <vector>
 
+// The KRX stock tick table moved out of the library's core into <algotradelib/krx>; this builds with either library.
+// Drop the old branch when that library is published (plan/todo/krx-include-cleanup.md).
+#if __has_include(<algotradelib/krx>)
+#include <algotradelib/krx>
+#endif
+
 namespace pyatl {
 
 namespace atl = algotradelib;
@@ -50,7 +56,11 @@ inline atl::Instrument reference_of(const std::string& symbol) {
   instrument.type_ = atl::SecurityType::STOCK;
   instrument.currency_ = currency();
   instrument.lot_size_ = atl::Decimal64(1, 0);
+#if __has_include(<algotradelib/krx>)
+  instrument.price_rule_ = atl::krx::equity_price_rule();
+#else
   instrument.price_rule_ = atl::PriceRule::krx_equity();
+#endif
   return instrument;
 }
 
