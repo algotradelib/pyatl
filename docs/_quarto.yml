@@ -32,7 +32,7 @@ website:
           - text: Measures of your own
             file: guides/measures.qmd
       - text: algotradelib (C++)
-        href: https://algotradelib.github.io/docs/
+        href: https://algotradelib.github.io/cpp/
     right:
       - icon: github
         href: https://github.com/algotradelib/pyatl

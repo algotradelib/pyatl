@@ -44,7 +44,7 @@ NumPy is its only Python dependency; the examples read data with pandas, install
 - [Reference](reference/index.qmd): the functions and classes.
 - [Defining the replay sequence](guides/replay.qmd): rolling windows and resampled paths.
 - [Measures of your own](guides/measures.qmd): computing what the result does not report.
-- [algotradelib's documentation](https://algotradelib.github.io/docs/): the C++ library underneath.
+- [algotradelib's documentation](https://algotradelib.github.io/cpp/): the C++ library underneath.
 
 ## Status
 
