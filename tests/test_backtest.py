@@ -497,6 +497,7 @@ def test_a_replay_finished_without_bars_has_empty_equity_text():
 
     result = pyatl.Replay(Nothing(), ["005930"]).finish()
     assert result.bars == 0 and result.opening_equity == "" and result.closing_equity == ""
+    assert math.isnan(result.periods_per_year) and math.isnan(result.annualized_sharpe)
     assert result.volume_ignored and result.bar_tape_unverified
     assert result.sellable_is_whole_holding and result.buying_power_is_ledger_cash
 
@@ -609,11 +610,20 @@ def test_the_report_flags_reach_python():
 
 def test_periods_per_year_are_counted_from_the_curve():
     closes = [12000, 12500, 11800, 12300, 11900, 12600, 12100]
-    result = pyatl.backtest(TargetAt(on=0, off=5, quantity=100), {"005930": bars(closes)})
+    business = bars(closes)
+    business.index = pd.bdate_range("2024-01-04", periods=len(closes))  # Thursday on: a weekend inside
+    result = pyatl.backtest(TargetAt(on=0, off=5, quantity=100), {"005930": business})
     times = result.equity["time"]
-    years = (times[-1] - times[0]) / (365.25 * 86400e9)
+    years = (int(times[-1]) - int(times[0])) / (365.25 * 86400e9)
     assert result.periods_per_year == pytest.approx((len(times) - 1) / years)
-    assert result.periods_per_year == pytest.approx(365.25)  # one point every calendar day, not a fixed 245
-    assert (result.annualized_sharpe / result.sharpe) ** 2 == pytest.approx(result.periods_per_year)
+    assert result.periods_per_year not in (pytest.approx(245), pytest.approx(365.25))
+    assert result.annualized_sharpe == pytest.approx(result.sharpe * math.sqrt(result.periods_per_year))
+    # A span longer than a signed 64-bit count of nanoseconds (Linux's clock) still counts.
+    far = bars([100] * 4)
+    far.index = pd.to_datetime(["1800-01-01", "1900-01-01", "2000-01-01", "2100-01-01"])
+    wide = pyatl.backtest(TargetAt(on=0, off=99, quantity=1), {"005930": far})
+    ends = wide.equity["time"]
+    assert len(ends) == 4
+    assert wide.periods_per_year == pytest.approx(3 / ((int(ends[-1]) - int(ends[0])) / (365.25 * 86400e9)))
     one = pyatl.backtest(TargetAt(on=0, off=5), {"005930": bars([100])})
     assert math.isnan(one.periods_per_year) and math.isnan(one.annualized_sharpe)
