@@ -113,12 +113,13 @@ class BacktestResult:
     periods_per_year : float
         The periods in a year that `annualized_sharpe` uses: the `periods_per_year` argument if given, otherwise
         counted from this replay's own equity curve, as its points less one over the years between its first and
-        last point (365.25 days each). NaN with fewer than two points at distinct times. Annualizing needs this
-        number known: a replay shorter than a year extrapolates its own rate, with no full cycle of nights,
-        weekends and holidays, so its annualized figure can be inflated (about 1.22 times for a week of daily
-        bars, about 2.34 times for one day of 1m bars); give `periods_per_year` to set it. A counted rate is that
-        of intervals between points, not of the returns that enter `sharpe`: the point after an unvalued bar
-        carries no return, and a stretch of unvalued bars lowers the count.
+        last point (365.25 days each). A given count is reported as given, even on an empty replay; a counted one
+        is NaN with fewer than two points at distinct times. Annualizing needs this number known: a replay shorter
+        than a year extrapolates its own rate, with no full cycle of nights, weekends and holidays, so its
+        annualized figure can be inflated (against 245 KRX sessions a year of 390 1m bars each, about 1.22 times
+        for a week of daily bars and about 2.35 times for one day of 1m bars); give `periods_per_year` to set it.
+        A counted rate is that of intervals between points, not of the returns that enter `sharpe`: the point
+        after an unvalued bar carries no return, and a stretch of unvalued bars lowers the count.
     """
 
     bars: int
