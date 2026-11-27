@@ -1,5 +1,6 @@
 import dataclasses
 import inspect
+import math
 import re
 import shutil
 import subprocess
@@ -86,3 +87,15 @@ def test_the_old_module_path_still_imports_and_unpickles():
     loaded = pickle.loads(old)
     assert loaded.closing_equity == result.closing_equity
     assert np.array_equal(loaded.equity["equity"], result.equity["equity"])
+
+    # A result from before the caveat fields and periods_per_year: it unpickles, prints and converts with defaults.
+    added = ["expired_day_orders", "multiple_instruments", "cost_totals_incomplete", "volume_ignored"]
+    added += ["bar_tape_unverified", "sellable_is_whole_holding", "buying_power_is_ledger_cash", "periods_per_year"]
+    earlier = {name: value for name, value in vars(result).items() if name not in added}
+    saved = object.__new__(BacktestResult)
+    vars(saved).update(earlier)
+    loaded = pickle.loads(pickle.dumps(saved))
+    assert loaded.expired_day_orders is None and loaded.multiple_instruments is None
+    assert loaded.volume_ignored is True and math.isnan(loaded.periods_per_year)
+    assert "periods_per_year=nan" in repr(loaded) and dataclasses.asdict(loaded)["cost_totals_incomplete"] is None
+    assert BacktestResult(**earlier).closing_equity == result.closing_equity  # an older caller's arguments

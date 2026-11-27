@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from decimal import Decimal
@@ -18,7 +19,9 @@ class BacktestResult:
 
     `fills`, `equity`, `rejected` and `refused` are dicts of columns (`pandas.DataFrame(result.fills)` makes
     a table). Times are ns since the epoch (UTC). `halted` says why the replay stopped early, if it did; the
-    figures then cover only what ran. Figures are NaN where the library has none.
+    figures then cover only what ran. Figures are NaN where the library has none. A result saved before a field
+    existed loads with that field's default: None for a count or flag it did not report, True for the four constant
+    cautions (they held for every replay), NaN for `periods_per_year`.
 
     Attributes
     ----------
@@ -82,14 +85,14 @@ class BacktestResult:
         `fill`, empty under the default (the next bar's open).
     market_fills_by_rule : int
         Fills that rule priced; 0 under the default.
-    expired_day_orders : int
+    expired_day_orders : int or None
         Orders withdrawn unfilled when their trading session ended, as a day order expires live: for example a
         "decision-close" order whose symbol had no price yet and whose next daily bar has no open.
-    multiple_instruments : bool
+    multiple_instruments : bool or None
         Whether more than one symbol executed: the library's caution about survivorship bias. A universe chosen
         from today's listings leaves out names delisted during the period, which flatters the result; the library
         cannot see how the symbols were chosen, so a hand-picked list sets it too.
-    cost_totals_incomplete : bool
+    cost_totals_incomplete : bool or None
         Whether some cost could not be summed exactly (amounts far beyond any real account, such as a huge
         `min_commission`); `commission_paid`, `tax_paid` and `slippage_paid` are then NaN.
     volume_ignored : bool
@@ -106,10 +109,15 @@ class BacktestResult:
         computes buying power on its own terms. pyatl does not cap buys at that cash either: a buy may take cash
         below zero, which `overdrawn_bars` and `lowest_cash` report.
     periods_per_year : float
-        The periods in a year that `annualized_sharpe` uses, counted from this replay's own equity curve: its points
-        less one, over the years between its first and last point (365.25 days each). NaN with fewer than two
-        points. Nothing fixes a trading calendar, so a short replay's count is noisy (a run over a holiday week
-        counts fewer days a year), and daily bars on business days give about 260.
+        The periods in a year that `annualized_sharpe` uses: the rate of intervals between the points of this
+        replay's own equity curve, its points less one over the years between its first and last point (365.25
+        days each). NaN when the curve has fewer than two points at distinct times. It is not the rate of the
+        returns that enter `sharpe`: the point after an unvalued bar carries no return, and a stretch of unvalued
+        bars lowers the count. Nothing fixes a trading calendar, so the span decides: daily bars on business days
+        give about 260; a replay shorter than one session (one day of 1m bars) has no night or weekend in its span
+        and counts as if the market traded around the clock (about 525,960 for 1m bars, against under 100,000 over
+        many weeks of KRX sessions), which inflates `annualized_sharpe`; a long gap before the second point lowers
+        it. A short replay's count is noisy.
     """
 
     bars: int
@@ -138,14 +146,16 @@ class BacktestResult:
     unchecked_fill_causality: int
     market_price_rule: str
     market_fills_by_rule: int
-    expired_day_orders: int
-    multiple_instruments: bool
-    cost_totals_incomplete: bool
-    volume_ignored: bool
-    bar_tape_unverified: bool
-    sellable_is_whole_holding: bool
-    buying_power_is_ledger_cash: bool
-    periods_per_year: float
+    # Fields added after the first release default, so older callers and saved results still load: unknown counts
+    # and flags as None, the constants as the True they always were, the count as NaN.
+    expired_day_orders: int | None = None
+    multiple_instruments: bool | None = None
+    cost_totals_incomplete: bool | None = None
+    volume_ignored: bool = True
+    bar_tape_unverified: bool = True
+    sellable_is_whole_holding: bool = True
+    buying_power_is_ledger_cash: bool = True
+    periods_per_year: float = math.nan
 
 
 class Replay:
