@@ -335,6 +335,25 @@ def test_decision_close_with_no_close_seen_fills_at_the_open_and_the_last_bar_st
     assert result.unfilled == 1
 
 
+def test_a_decision_close_order_with_no_price_expires_with_its_session():
+    # 000660 starts on day 1 with no open; its target is set from 005930's bar on day 0, before any 000660 price.
+    class Early:
+        def __init__(self):
+            self.n = 0
+
+        def on_bar(self, ctx, bar):
+            if bar.symbol == "005930":
+                if self.n == 0:
+                    ctx.target("000660", 10)
+                self.n += 1
+
+    late = bars([300, 310, 320], start="2024-01-02")
+    late.loc[late.index[0], "open"] = np.nan
+    result = pyatl.backtest(Early(), {"005930": bars(OPENS, CLOSES), "000660": late}, fill="decision-close")
+    assert result.expired_day_orders == 1
+    assert result.unfilled == 0 and len(result.fills["time"]) == 0
+
+
 def test_next_close_fills_at_the_next_bars_close():
     data = {"005930": bars(OPENS, CLOSES)}
     default = pyatl.backtest(TargetAt(on=0, off=2), data)
@@ -541,3 +560,42 @@ def test_orders_cleared_by_a_halt_are_counted_as_aborted():
     result = pyatl.backtest(Both(), data, cash="-9223372036854775807", scale=0)
     assert result.halted is not None
     assert result.aborted == 1 and result.unfilled == 0
+
+
+def test_the_report_flags_reach_python():
+    class Targets:
+        """Targets `quantities[k]` of `symbol` on its k-th bar."""
+
+        def __init__(self, symbol, quantities):
+            self.symbol, self.quantities, self.n = symbol, quantities, 0
+
+        def on_bar(self, ctx, bar):
+            if bar.symbol == self.symbol:
+                if self.n < len(self.quantities):
+                    ctx.target(self.symbol, self.quantities[self.n])
+                self.n += 1
+
+    class Both:
+        def on_bars(self, ctx, bars):
+            for bar in bars:
+                ctx.target(bar.symbol, 1)
+
+    data = {"005930": bars([100] * 3), "000660": bars([200] * 3)}
+    one = pyatl.backtest(Targets("005930", [1]), data)
+    assert len(one.fills["time"]) == 1 and not one.multiple_instruments  # two symbols fed, one executed
+    assert not one.cost_totals_incomplete and one.expired_day_orders == 0
+    assert one.volume_ignored and one.bar_tape_unverified
+    assert one.sellable_is_whole_holding and one.buying_power_is_ledger_cash
+    assert pyatl.backtest(Both(), data).multiple_instruments
+
+    # Each fill pays a minimum commission of 4e18 KRW: the third makes a sum no exact decimal holds.
+    huge = pyatl.backtest(
+        Targets("005930", [1, 0, 1]),
+        {"005930": bars([100] * 4)},
+        cash="9000000000000000000",
+        min_commission="4000000000000000000",
+        scale=0,
+    )
+    assert huge.halted is None and len(huge.fills["time"]) == 3
+    assert huge.cost_totals_incomplete
+    assert math.isnan(huge.commission_paid) and math.isnan(huge.tax_paid) and math.isnan(huge.slippage_paid)

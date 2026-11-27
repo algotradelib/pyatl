@@ -1,3 +1,4 @@
+import dataclasses
 import inspect
 import re
 import shutil
@@ -30,6 +31,9 @@ def test_every_public_name_is_documented(name):
         # A class with attributes documents them in its own section; quartodoc otherwise links a summary table
         # to attribute sections it does not render.
         assert "Attributes\n----------" in doc, name
+    if name == "BacktestResult":
+        undocumented = [field.name for field in dataclasses.fields(pyatl.BacktestResult) if field.name not in doc]
+        assert not undocumented, undocumented
 
 
 @pytest.mark.parametrize(
