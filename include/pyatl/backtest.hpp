@@ -77,7 +77,7 @@ struct Block {
 
 /**
  * Periods per year counted from an equity curve: its points less one over the years they span (365.25 days each).
- * None when the curve spans less than a year, which cannot measure how many periods a year holds.
+ * None with fewer than two points or no span, where the count is undefined.
  */
 inline std::optional<double> counted_periods_per_year(const std::vector<atl::backtest::EquityPoint>& curve) {
   if (curve.size() < 2) {
@@ -88,12 +88,11 @@ inline std::optional<double> counted_periods_per_year(const std::vector<atl::bac
   const auto seconds = [](TimePoint at) {
     return std::chrono::duration<double>(at.time_since_epoch()).count();
   };
-  const auto year = 365.25 * 86400.0;
   const auto span = seconds(curve.back().at_) - seconds(curve.front().at_);
-  if (!(span >= year)) {
+  if (!(span > 0)) {
     return std::nullopt;
   }
-  return static_cast<double>(curve.size() - 1) / (span / year);
+  return static_cast<double>(curve.size() - 1) / (span / (365.25 * 86400.0));
 }
 
 template <class Engine>

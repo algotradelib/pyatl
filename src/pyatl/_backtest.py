@@ -110,15 +110,14 @@ class BacktestResult:
         computes buying power on its own terms. pyatl does not cap buys at that cash either: a buy may take cash
         below zero, which `overdrawn_bars` and `lowest_cash` report.
     periods_per_year : float
-        The periods in a year that `annualized_sharpe` uses. Annualizing needs that number known: given as the
-        `periods_per_year` argument, it is used whatever the span; otherwise it is counted from this replay's own
-        equity curve, as its points less one over the years between its first and last point (365.25 days each),
-        but only when that span is at least a year. A shorter sample cannot measure how many periods a year holds,
-        so it is left unannualized: NaN here and in `annualized_sharpe`. A replay of exactly one calendar year of
-        daily bars spans just under a year (2 January to 30 December), so it needs the argument or a slightly
-        longer span. The counted rate is that of intervals between points, not of the returns that enter
-        `sharpe`: the point after an unvalued bar carries no return, and a stretch of unvalued bars lowers the
-        count. Nothing fixes a trading calendar: daily bars on business days count about 260.
+        The periods in a year that `annualized_sharpe` uses: the `periods_per_year` argument if given, otherwise
+        counted from this replay's own equity curve, as its points less one over the years between its first and
+        last point (365.25 days each). NaN with fewer than two points at distinct times. Annualizing needs this
+        number known: a replay shorter than a year extrapolates its own rate, with no full cycle of nights,
+        weekends and holidays, so its annualized figure can be inflated (about 1.22 times for a week of daily
+        bars, about 2.34 times for one day of 1m bars); give `periods_per_year` to set it. A counted rate is that
+        of intervals between points, not of the returns that enter `sharpe`: the point after an unvalued bar
+        carries no return, and a stretch of unvalued bars lowers the count.
     """
 
     bars: int
@@ -210,9 +209,8 @@ class Replay:
         reason in `halted`; receiving such bars alone does not.
         `market_price_rule` and `market_fills_by_rule` in the result name the rule and count its fills.
     periods_per_year : float, optional
-        The periods in a year that `annualized_sharpe` uses, at any span.
-        None (the default) counts them from the equity curve when it spans at least a year and leaves
-        `annualized_sharpe` NaN otherwise; see `BacktestResult.periods_per_year`. Must be finite and above 0.
+        The periods in a year that `annualized_sharpe` uses. None (the default) counts them from the equity
+        curve; see `BacktestResult.periods_per_year`. Must be finite and above 0.
 
     Attributes
     ----------
@@ -404,9 +402,8 @@ def backtest(
         reason in `halted`; receiving such bars alone does not.
         `market_price_rule` and `market_fills_by_rule` in the result name the rule and count its fills.
     periods_per_year : float, optional
-        The periods in a year that `annualized_sharpe` uses, at any span.
-        None (the default) counts them from the equity curve when it spans at least a year and leaves
-        `annualized_sharpe` NaN otherwise; see `BacktestResult.periods_per_year`. Must be finite and above 0.
+        The periods in a year that `annualized_sharpe` uses. None (the default) counts them from the equity
+        curve; see `BacktestResult.periods_per_year`. Must be finite and above 0.
 
     Returns
     -------

@@ -618,16 +618,11 @@ def test_periods_per_year_are_counted_from_the_curve():
         times = result.equity["time"]
         return (int(times[-1]) - int(times[0])) / (365.25 * 86400e9)
 
-    # A year or more of business days: counted from the curve, neither 245 nor 365.25.
-    longer = held(pd.bdate_range("2024-01-02", "2025-01-10"))
-    assert years(longer) >= 1
+    # Business days: counted from the curve, neither 245 nor 365.25.
+    longer = held(pd.bdate_range("2024-01-02", "2024-03-29"))
     assert longer.periods_per_year == pytest.approx((len(longer.equity["time"]) - 1) / years(longer))
     assert longer.periods_per_year not in (pytest.approx(245), pytest.approx(365.25))
     assert longer.annualized_sharpe == pytest.approx(longer.sharpe * math.sqrt(longer.periods_per_year))
-    # One calendar year of business days spans just under a year: no count, Sharpe still per period.
-    year = held(pd.bdate_range("2024-01-02", "2024-12-31"))
-    assert years(year) < 1 and math.isfinite(year.sharpe)
-    assert math.isnan(year.periods_per_year) and math.isnan(year.annualized_sharpe)
     # The caller's count is used at any span.
     given = held(pd.bdate_range("2024-01-02", "2024-01-31"), periods_per_year=250)
     assert given.periods_per_year == 250
