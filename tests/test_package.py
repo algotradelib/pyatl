@@ -92,12 +92,13 @@ def test_the_old_module_path_still_imports_and_unpickles():
     added = ["expired_day_orders", "multiple_instruments", "cost_totals_incomplete", "volume_ignored"]
     added += ["bar_tape_unverified", "sellable_is_whole_holding", "buying_power_is_ledger_cash", "periods_per_year"]
     earlier = {name: value for name, value in vars(result).items() if name not in added}
+    earlier["annualized_sharpe"] = 1.5  # what an older result saved, with no count beside it
     saved = object.__new__(BacktestResult)
     vars(saved).update(earlier)
     loaded = pickle.loads(pickle.dumps(saved))
     assert loaded.expired_day_orders is None and loaded.multiple_instruments is None
     assert loaded.volume_ignored is True and loaded.bar_tape_unverified is True
     assert loaded.sellable_is_whole_holding is True and loaded.buying_power_is_ledger_cash is True
-    assert math.isnan(loaded.periods_per_year)
+    assert math.isnan(loaded.periods_per_year) and loaded.annualized_sharpe == 1.5
     assert "periods_per_year=nan" in repr(loaded) and dataclasses.asdict(loaded)["cost_totals_incomplete"] is None
     assert BacktestResult(**earlier).closing_equity == result.closing_equity  # an older caller's arguments

@@ -630,7 +630,8 @@ def test_periods_per_year_are_counted_from_the_curve():
     assert longer.periods_per_year != pytest.approx(250)
     assert held(pd.bdate_range("2024-01-02", "2024-03-29"), periods_per_year=250).periods_per_year == 250
     invalid = [(0, ValueError), (-1.0, ValueError), (math.nan, ValueError), (math.inf, ValueError)]
-    invalid += [(-math.inf, ValueError), (True, TypeError), (False, TypeError), ("250", TypeError)]
+    invalid += [(-math.inf, ValueError), (True, TypeError), (False, TypeError), (np.bool_(True), TypeError)]
+    invalid += [("250", TypeError)]
     for bad, error in invalid:
         with pytest.raises(error, match="periods_per_year"):
             held(pd.bdate_range("2024-01-02", "2024-01-31"), periods_per_year=bad)
