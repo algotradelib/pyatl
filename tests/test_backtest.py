@@ -640,5 +640,10 @@ def test_periods_per_year_are_counted_from_the_curve():
     far.index = pd.to_datetime(["1800-01-01", "1900-01-01", "2000-01-01", "2100-01-01"])
     wide = pyatl.backtest(TargetAt(on=0, off=99, quantity=1), {"005930": far})
     assert len(wide.equity["time"]) == 4 and wide.periods_per_year == pytest.approx(3 / years(wide))
+    # Two closes one microsecond apart in 2250: an exact span, where floating seconds since the epoch are not.
+    near = bars([100] * 2)
+    near.index = pd.to_datetime(["2250-01-01 09:00:00.000000", "2250-01-01 09:00:00.000001"])
+    tight = pyatl.backtest(TargetAt(on=99, off=99), {"005930": near}, interval="1m", stamp="close")
+    assert len(tight.equity["time"]) == 2 and tight.periods_per_year == pytest.approx(31_557_600_000_000)
     one = pyatl.backtest(TargetAt(on=0, off=5), {"005930": bars([100])})
     assert math.isnan(one.periods_per_year) and math.isnan(one.annualized_sharpe)
