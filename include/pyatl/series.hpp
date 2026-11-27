@@ -28,8 +28,7 @@ namespace atl = algotradelib;
 using TimePoint = std::chrono::system_clock::time_point;
 
 /**
- * What pyatl decides itself, in one place: every symbol is a KRX stock in KRW, sales pay Korea's tax, and
- * returns are annualized over the KRX session's 245 trading days.
+ * What pyatl decides itself, in one place: every symbol is a KRX stock in KRW, and sales pay Korea's tax.
  */
 namespace market {
 
@@ -38,12 +37,6 @@ inline atl::Currency currency() {
 }
 
 inline constexpr atl::Country country = atl::Country::KR;
-
-inline atl::strategy::SessionWindow session() {
-  return atl::strategy::SessionWindow::krx();
-}
-
-inline constexpr double trading_days = 245.0;
 
 inline atl::InstrumentId instrument_of(const std::string& symbol) {
   return atl::InstrumentId{country, atl::Venue::COMBINED, symbol};

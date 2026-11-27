@@ -43,7 +43,7 @@ class BacktestResult:
     sharpe, sortino : float
         Per period of the equity curve (one bar's interval), not annualized.
     annualized_sharpe : float
-        `sharpe` scaled to a year of KRX trading days.
+        `sharpe` times the square root of `periods_per_year`; NaN when there is no count.
     turnover : float
         Everything traded (buys and sells, quantity x price) divided by the opening equity, over the whole run.
     commission_paid, tax_paid, slippage_paid : float
@@ -105,6 +105,11 @@ class BacktestResult:
         Always True: the replay's buying power is its own cash, with no settlement modelled, while a broker
         computes buying power on its own terms. pyatl does not cap buys at that cash either: a buy may take cash
         below zero, which `overdrawn_bars` and `lowest_cash` report.
+    periods_per_year : float
+        The periods in a year that `annualized_sharpe` uses, counted from this replay's own equity curve: its points
+        less one, over the years between its first and last point (365.25 days each). NaN with fewer than two
+        points. Nothing fixes a trading calendar, so a short replay's count is noisy (a run over a holiday week
+        counts fewer days a year), and daily bars on business days give about 260.
     """
 
     bars: int
@@ -140,6 +145,7 @@ class BacktestResult:
     bar_tape_unverified: bool
     sellable_is_whole_holding: bool
     buying_power_is_ledger_cash: bool
+    periods_per_year: float
 
 
 class Replay:

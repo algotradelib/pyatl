@@ -82,6 +82,7 @@ nb::dict to_dict(Result r) {
   d["bar_tape_unverified"] = r.bar_tape_unverified;
   d["sellable_is_whole_holding"] = r.sellable_is_whole_holding;
   d["buying_power_is_ledger_cash"] = r.buying_power_is_ledger_cash;
+  d["periods_per_year"] = r.periods_per_year;
   return d;
 }
 

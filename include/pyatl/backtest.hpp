@@ -9,6 +9,7 @@
 #include <nanobind/nanobind.h>
 
 #include <algorithm>
+#include <chrono>
 #include <memory>
 #include <optional>
 #include <queue>
@@ -45,6 +46,7 @@ struct Result {
   bool multiple_instruments{false}, cost_totals_incomplete{false};
   bool volume_ignored{false}, bar_tape_unverified{false}, sellable_is_whole_holding{false};
   bool buying_power_is_ledger_cash{false};
+  double periods_per_year{NAN};
 };
 
 /** The library's market-price preset named by `Settings::fill`. */
@@ -72,8 +74,23 @@ struct Block {
   std::vector<TimePoint> ends; // bar_period_end of each bar
 };
 
+/**
+ * Periods per year counted from an equity curve: its points less one over the years they span (365.25 days each).
+ * None with fewer than two points or no span.
+ */
+inline std::optional<double> counted_periods_per_year(const std::vector<atl::backtest::EquityPoint>& curve) {
+  if (curve.size() < 2) {
+    return std::nullopt;
+  }
+  const auto span = std::chrono::duration<double>(curve.back().at_ - curve.front().at_).count();
+  if (!(span > 0)) {
+    return std::nullopt;
+  }
+  return static_cast<double>(curve.size() - 1) / (span / (365.25 * 86400.0));
+}
+
 template <class Engine>
-Result result_of(const Engine& engine, atl::BarInterval interval) {
+Result result_of(const Engine& engine) {
   Result out;
   const auto& result = engine.result();
   out.bars = result.bars_;
@@ -128,7 +145,9 @@ Result result_of(const Engine& engine, atl::BarInterval interval) {
   }
   // The costs are known from the executions alone, so they are read even when no equity point could be valued;
   // the figures of the curve only when it has a point.
-  const auto periods = atl::backtest::periods_per_year(interval, market::session(), market::trading_days);
+  // Annualized by the periods the replay's own curve shows in a year, not a fixed calendar.
+  const auto periods = counted_periods_per_year(result.equity_);
+  out.periods_per_year = periods ? *periods : NAN;
   const auto report = atl::backtest::summarize(result, engine.fills(), periods);
   out.commission_paid = to_double_or_nan(report.commission_paid_);
   out.tax_paid = to_double_or_nan(report.tax_paid_);
@@ -160,7 +179,7 @@ class EngineBase {
 public:
   virtual ~EngineBase() = default;
   virtual void feed(const atl::strategy::BarEvent& event) = 0;
-  virtual Result finish(atl::BarInterval interval) = 0;
+  virtual Result finish() = 0;
 };
 
 template <class Strategy>
@@ -173,9 +192,9 @@ public:
     engine_.feed(event);
   }
 
-  Result finish(atl::BarInterval interval) override {
+  Result finish() override {
     engine_.finish();
-    return result_of(engine_, interval);
+    return result_of(engine_);
   }
 
 private:
@@ -308,7 +327,7 @@ public:
     require_open();
     Result result;
     run([&] {
-      result = engine_->finish(interval_);
+      result = engine_->finish();
     });
     state_ = State::FINISHED;
     release();
