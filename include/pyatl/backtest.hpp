@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <queue>
@@ -83,15 +84,13 @@ inline std::optional<double> counted_periods_per_year(const std::vector<atl::bac
   if (curve.size() < 2) {
     return std::nullopt;
   }
-  // Each end in floating seconds before subtracting: the clock's integer difference can overflow (a span of more than
-  // 292 years in nanoseconds) where each end is still representable.
-  const auto seconds = [](TimePoint at) {
-    return std::chrono::duration<double>(at.time_since_epoch()).count();
-  };
-  const auto span = seconds(curve.back().at_) - seconds(curve.front().at_);
-  if (!(span > 0)) {
+  // Exact ticks, subtracted unsigned: a span of more than 292 years in nanoseconds overflows the signed count.
+  const auto first = curve.front().at_.time_since_epoch().count(), last = curve.back().at_.time_since_epoch().count();
+  if (!(last > first)) {
     return std::nullopt;
   }
+  const auto ticks = static_cast<std::uint64_t>(last) - static_cast<std::uint64_t>(first);
+  const auto span = static_cast<double>(ticks) * TimePoint::period::num / TimePoint::period::den;
   return static_cast<double>(curve.size() - 1) / (span / (365.25 * 86400.0));
 }
 
