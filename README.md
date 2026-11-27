@@ -90,6 +90,7 @@ The bars still run through the C++ engine one at a time; in our measurements, fe
 ## The result
 
 `BacktestResult` holds the fills (with commission, sale tax and slippage), the equity curve, the library's summary (total return, Sharpe, Sortino, maximum drawdown, turnover, costs paid), and what did not go as asked: refused orders with the library's reason, orders left unfilled, gaps, bars whose equity could not be valued, and the lowest cash if it went below zero.
+It also carries the library's cautions that hold for every replay (volumes ignored, the bars' venue unknown, every held share sellable, buying power as the replay's own cash), and `multiple_instruments` when more than one symbol traded.
 The fills and the equity curve are columns (NumPy arrays, and lists for the symbol and side), so any other measure is a few lines of NumPy or pandas away.
 
 ## Status
