@@ -11,6 +11,7 @@
 #include <cmath>
 #include <cstdint>
 #include <numeric>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -77,6 +78,7 @@ struct Settings {
   int slippage_ticks{0};
   bool shorts{false};
   std::string fill{"next-open"}; // parsed where the engine is included (backtest.hpp)
+  std::optional<double> periods_per_year; // none: counted from the equity curve (backtest.hpp)
 };
 
 inline atl::BarInterval parse_interval(const std::string& text) {

@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <memory>
 #include <optional>
 #include <queue>
@@ -76,7 +77,7 @@ struct Block {
 
 /**
  * Periods per year counted from an equity curve: its points less one over the years they span (365.25 days each).
- * None with fewer than two points or no span.
+ * None when the curve spans less than a year, which cannot measure how many periods a year holds.
  */
 inline std::optional<double> counted_periods_per_year(const std::vector<atl::backtest::EquityPoint>& curve) {
   if (curve.size() < 2) {
@@ -87,15 +88,16 @@ inline std::optional<double> counted_periods_per_year(const std::vector<atl::bac
   const auto seconds = [](TimePoint at) {
     return std::chrono::duration<double>(at.time_since_epoch()).count();
   };
+  const auto year = 365.25 * 86400.0;
   const auto span = seconds(curve.back().at_) - seconds(curve.front().at_);
-  if (!(span > 0)) {
+  if (!(span >= year)) {
     return std::nullopt;
   }
-  return static_cast<double>(curve.size() - 1) / (span / (365.25 * 86400.0));
+  return static_cast<double>(curve.size() - 1) / (span / year);
 }
 
 template <class Engine>
-Result result_of(const Engine& engine) {
+Result result_of(const Engine& engine, std::optional<double> periods_per_year) {
   Result out;
   const auto& result = engine.result();
   out.bars = result.bars_;
@@ -150,8 +152,8 @@ Result result_of(const Engine& engine) {
   }
   // The costs are known from the executions alone, so they are read even when no equity point could be valued;
   // the figures of the curve only when it has a point.
-  // Annualized by the periods the replay's own curve shows in a year, not a fixed calendar.
-  const auto periods = counted_periods_per_year(result.equity_);
+  // Annualized by the caller's count, else by the periods the replay's own curve shows in a year, not a fixed calendar.
+  const auto periods = periods_per_year ? periods_per_year : counted_periods_per_year(result.equity_);
   out.periods_per_year = periods ? *periods : NAN;
   const auto report = atl::backtest::summarize(result, engine.fills(), periods);
   out.commission_paid = to_double_or_nan(report.commission_paid_);
@@ -184,7 +186,7 @@ class EngineBase {
 public:
   virtual ~EngineBase() = default;
   virtual void feed(const atl::strategy::BarEvent& event) = 0;
-  virtual Result finish() = 0;
+  virtual Result finish(std::optional<double> periods_per_year) = 0;
 };
 
 template <class Strategy>
@@ -197,9 +199,9 @@ public:
     engine_.feed(event);
   }
 
-  Result finish() override {
+  Result finish(std::optional<double> periods_per_year) override {
     engine_.finish();
-    return result_of(engine_);
+    return result_of(engine_, periods_per_year);
   }
 
 private:
@@ -219,7 +221,10 @@ public:
     nb::handle strategy, const std::vector<std::string>& symbols, const Settings& settings, const std::string& interval,
     const std::string& stamp
   )
-  : interval_(parse_interval(interval)), stamp_(parse_stamp(stamp)) {
+  : interval_(parse_interval(interval)), stamp_(parse_stamp(stamp)), periods_per_year_(settings.periods_per_year) {
+    if (periods_per_year_ && !(std::isfinite(*periods_per_year_) && *periods_per_year_ > 0)) {
+      throw std::invalid_argument("periods_per_year is a finite number above 0, or None to count it");
+    }
     if (nb::hasattr(strategy, "on_start")) {
       // The library's replay never calls on_start; a setup step that silently never runs is worse than none.
       throw nb::type_error("on_start is not called by algotradelib's replay; do the setup in __init__");
@@ -332,7 +337,7 @@ public:
     require_open();
     Result result;
     run([&] {
-      result = engine_->finish();
+      result = engine_->finish(periods_per_year_);
     });
     state_ = State::FINISHED;
     release();
@@ -546,6 +551,7 @@ private:
 
   atl::BarInterval interval_;
   atl::BarStamp stamp_;
+  std::optional<double> periods_per_year_;
   std::vector<std::string> symbols_;
   std::unordered_map<std::string, atl::InstrumentId> ids_;
   std::unordered_map<std::string, std::size_t> index_;

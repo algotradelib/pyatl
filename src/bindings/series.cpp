@@ -4,6 +4,7 @@
 #include <pyatl/series.hpp>
 
 #include <nanobind/ndarray.h>
+#include <nanobind/stl/optional.h>
 #include <nanobind/stl/string.h>
 
 namespace nb = nanobind;
@@ -59,5 +60,6 @@ void pyatl::bind_series(nb::module_& m) {
     .def_rw("sell_tax", &Settings::sell_tax)
     .def_rw("slippage_ticks", &Settings::slippage_ticks)
     .def_rw("shorts", &Settings::shorts)
-    .def_rw("fill", &Settings::fill);
+    .def_rw("fill", &Settings::fill)
+    .def_rw("periods_per_year", &Settings::periods_per_year);
 }

@@ -46,7 +46,8 @@ class BacktestResult:
     sharpe, sortino : float
         Per period of the equity curve (one bar's interval), not annualized.
     annualized_sharpe : float
-        `sharpe` times the square root of `periods_per_year`; NaN when there is no count.
+        `sharpe` times the square root of `periods_per_year`, a rule that assumes serially uncorrelated returns;
+        NaN when there is no count. `sharpe`, per period, is reported either way.
     turnover : float
         Everything traded (buys and sells, quantity x price) divided by the opening equity, over the whole run.
     commission_paid, tax_paid, slippage_paid : float
@@ -109,15 +110,15 @@ class BacktestResult:
         computes buying power on its own terms. pyatl does not cap buys at that cash either: a buy may take cash
         below zero, which `overdrawn_bars` and `lowest_cash` report.
     periods_per_year : float
-        The periods in a year that `annualized_sharpe` uses: the rate of intervals between the points of this
-        replay's own equity curve, its points less one over the years between its first and last point (365.25
-        days each). NaN when the curve has fewer than two points at distinct times. It is not the rate of the
-        returns that enter `sharpe`: the point after an unvalued bar carries no return, and a stretch of unvalued
-        bars lowers the count. Nothing fixes a trading calendar, so the span decides: daily bars on business days
-        give about 260; a replay shorter than one session (one day of 1m bars) has no night or weekend in its span
-        and counts as if the market traded around the clock (about 525,960 for 1m bars, against under 100,000 over
-        many weeks of KRX sessions), which inflates `annualized_sharpe`; a long gap before the second point lowers
-        it. A short replay's count is noisy.
+        The periods in a year that `annualized_sharpe` uses. Annualizing needs that number known: given as the
+        `periods_per_year` argument, it is used whatever the span; otherwise it is counted from this replay's own
+        equity curve, as its points less one over the years between its first and last point (365.25 days each),
+        but only when that span is at least a year. A shorter sample cannot measure how many periods a year holds,
+        so it is left unannualized: NaN here and in `annualized_sharpe`. A replay of exactly one calendar year of
+        daily bars spans just under a year (2 January to 30 December), so it needs the argument or a slightly
+        longer span. The counted rate is that of intervals between points, not of the returns that enter
+        `sharpe`: the point after an unvalued bar carries no return, and a stretch of unvalued bars lowers the
+        count. Nothing fixes a trading calendar: daily bars on business days count about 260.
     """
 
     bars: int
@@ -208,6 +209,10 @@ class Replay:
         bars of a day or less: an order that would fill on a weekly or longer bar halts the replay, with the
         reason in `halted`; receiving such bars alone does not.
         `market_price_rule` and `market_fills_by_rule` in the result name the rule and count its fills.
+    periods_per_year : float, optional
+        The periods in a year that `annualized_sharpe` uses, at any span.
+        None (the default) counts them from the equity curve when it spans at least a year and leaves
+        `annualized_sharpe` NaN otherwise; see `BacktestResult.periods_per_year`. Must be finite and above 0.
 
     Attributes
     ----------
@@ -237,6 +242,7 @@ class Replay:
         scale: int = 4,
         shorts: bool = False,
         fill: str = "next-open",
+        periods_per_year: float | None = None,
     ) -> None:
         symbols = list(symbols)
         for symbol in symbols:
@@ -250,6 +256,7 @@ class Replay:
         settings.slippage_ticks = slippage_ticks
         settings.shorts = shorts
         settings.fill = fill
+        settings.periods_per_year = periods_per_year
         self._interval, self._stamp, self._scale = interval, stamp, scale
         self._core = _core.Replay(strategy, symbols, settings, interval, stamp)
         self._index = {symbol: i for i, symbol in enumerate(symbols)}
@@ -347,6 +354,7 @@ def backtest(
     scale: int = 4,
     shorts: bool = False,
     fill: str = "next-open",
+    periods_per_year: float | None = None,
 ) -> BacktestResult:
     """Replays `data` through `strategy` and returns the result.
 
@@ -395,6 +403,10 @@ def backtest(
         bars of a day or less: an order that would fill on a weekly or longer bar halts the replay, with the
         reason in `halted`; receiving such bars alone does not.
         `market_price_rule` and `market_fills_by_rule` in the result name the rule and count its fills.
+    periods_per_year : float, optional
+        The periods in a year that `annualized_sharpe` uses, at any span.
+        None (the default) counts them from the equity curve when it spans at least a year and leaves
+        `annualized_sharpe` NaN otherwise; see `BacktestResult.periods_per_year`. Must be finite and above 0.
 
     Returns
     -------
@@ -416,6 +428,7 @@ def backtest(
         scale=scale,
         shorts=shorts,
         fill=fill,
+        periods_per_year=periods_per_year,
     )
     replay.feed(data)
     return replay.finish()
