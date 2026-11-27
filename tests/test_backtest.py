@@ -623,12 +623,16 @@ def test_periods_per_year_are_counted_from_the_curve():
     assert longer.periods_per_year == pytest.approx((len(longer.equity["time"]) - 1) / years(longer))
     assert longer.periods_per_year not in (pytest.approx(245), pytest.approx(365.25))
     assert longer.annualized_sharpe == pytest.approx(longer.sharpe * math.sqrt(longer.periods_per_year))
-    # The caller's count is used at any span.
+    # The caller's count is used at any span, and wins over the curve's own.
     given = held(pd.bdate_range("2024-01-02", "2024-01-31"), periods_per_year=250)
     assert given.periods_per_year == 250
     assert given.annualized_sharpe == pytest.approx(given.sharpe * math.sqrt(250))
-    for bad in (0, -1.0, math.nan, math.inf):
-        with pytest.raises(ValueError, match="periods_per_year"):
+    assert longer.periods_per_year != pytest.approx(250)
+    assert held(pd.bdate_range("2024-01-02", "2024-03-29"), periods_per_year=250).periods_per_year == 250
+    invalid = [(0, ValueError), (-1.0, ValueError), (math.nan, ValueError), (math.inf, ValueError)]
+    invalid += [(-math.inf, ValueError), (True, TypeError), (False, TypeError), ("250", TypeError)]
+    for bad, error in invalid:
+        with pytest.raises(error, match="periods_per_year"):
             held(pd.bdate_range("2024-01-02", "2024-01-31"), periods_per_year=bad)
     # A span longer than a signed 64-bit count of nanoseconds (Linux's clock) still counts.
     far = bars([100] * 4)

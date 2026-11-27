@@ -96,6 +96,8 @@ def test_the_old_module_path_still_imports_and_unpickles():
     vars(saved).update(earlier)
     loaded = pickle.loads(pickle.dumps(saved))
     assert loaded.expired_day_orders is None and loaded.multiple_instruments is None
-    assert loaded.volume_ignored is True and math.isnan(loaded.periods_per_year)
+    assert loaded.volume_ignored is True and loaded.bar_tape_unverified is True
+    assert loaded.sellable_is_whole_holding is True and loaded.buying_power_is_ledger_cash is True
+    assert math.isnan(loaded.periods_per_year)
     assert "periods_per_year=nan" in repr(loaded) and dataclasses.asdict(loaded)["cost_totals_incomplete"] is None
     assert BacktestResult(**earlier).closing_equity == result.closing_equity  # an older caller's arguments
