@@ -609,21 +609,36 @@ def test_the_report_flags_reach_python():
 
 
 def test_periods_per_year_are_counted_from_the_curve():
-    closes = [12000, 12500, 11800, 12300, 11900, 12600, 12100]
-    business = bars(closes)
-    business.index = pd.bdate_range("2024-01-04", periods=len(closes))  # Thursday on: a weekend inside
-    result = pyatl.backtest(TargetAt(on=0, off=5, quantity=100), {"005930": business})
-    times = result.equity["time"]
-    years = (int(times[-1]) - int(times[0])) / (365.25 * 86400e9)
-    assert result.periods_per_year == pytest.approx((len(times) - 1) / years)
-    assert result.periods_per_year not in (pytest.approx(245), pytest.approx(365.25))
-    assert result.annualized_sharpe == pytest.approx(result.sharpe * math.sqrt(result.periods_per_year))
+    def held(days, **settings):
+        data = bars(np.round(12000 + 500 * np.sin(np.arange(len(days)))))
+        data.index = days
+        return pyatl.backtest(TargetAt(on=0, off=len(days) - 2, quantity=100), {"005930": data}, **settings)
+
+    def years(result):
+        times = result.equity["time"]
+        return (int(times[-1]) - int(times[0])) / (365.25 * 86400e9)
+
+    # A year or more of business days: counted from the curve, neither 245 nor 365.25.
+    longer = held(pd.bdate_range("2024-01-02", "2025-01-10"))
+    assert years(longer) >= 1
+    assert longer.periods_per_year == pytest.approx((len(longer.equity["time"]) - 1) / years(longer))
+    assert longer.periods_per_year not in (pytest.approx(245), pytest.approx(365.25))
+    assert longer.annualized_sharpe == pytest.approx(longer.sharpe * math.sqrt(longer.periods_per_year))
+    # One calendar year of business days spans just under a year: no count, Sharpe still per period.
+    year = held(pd.bdate_range("2024-01-02", "2024-12-31"))
+    assert years(year) < 1 and math.isfinite(year.sharpe)
+    assert math.isnan(year.periods_per_year) and math.isnan(year.annualized_sharpe)
+    # The caller's count is used at any span.
+    given = held(pd.bdate_range("2024-01-02", "2024-01-31"), periods_per_year=250)
+    assert given.periods_per_year == 250
+    assert given.annualized_sharpe == pytest.approx(given.sharpe * math.sqrt(250))
+    for bad in (0, -1.0, math.nan, math.inf):
+        with pytest.raises(ValueError, match="periods_per_year"):
+            held(pd.bdate_range("2024-01-02", "2024-01-31"), periods_per_year=bad)
     # A span longer than a signed 64-bit count of nanoseconds (Linux's clock) still counts.
     far = bars([100] * 4)
     far.index = pd.to_datetime(["1800-01-01", "1900-01-01", "2000-01-01", "2100-01-01"])
     wide = pyatl.backtest(TargetAt(on=0, off=99, quantity=1), {"005930": far})
-    ends = wide.equity["time"]
-    assert len(ends) == 4
-    assert wide.periods_per_year == pytest.approx(3 / ((int(ends[-1]) - int(ends[0])) / (365.25 * 86400e9)))
+    assert len(wide.equity["time"]) == 4 and wide.periods_per_year == pytest.approx(3 / years(wide))
     one = pyatl.backtest(TargetAt(on=0, off=5), {"005930": bars([100])})
     assert math.isnan(one.periods_per_year) and math.isnan(one.annualized_sharpe)
