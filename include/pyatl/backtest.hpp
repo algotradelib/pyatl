@@ -82,7 +82,12 @@ inline std::optional<double> counted_periods_per_year(const std::vector<atl::bac
   if (curve.size() < 2) {
     return std::nullopt;
   }
-  const auto span = std::chrono::duration<double>(curve.back().at_ - curve.front().at_).count();
+  // Each end in floating seconds before subtracting: the clock's integer difference can overflow (a span of more than
+  // 292 years in nanoseconds) where each end is still representable.
+  const auto seconds = [](TimePoint at) {
+    return std::chrono::duration<double>(at.time_since_epoch()).count();
+  };
+  const auto span = seconds(curve.back().at_) - seconds(curve.front().at_);
   if (!(span > 0)) {
     return std::nullopt;
   }
