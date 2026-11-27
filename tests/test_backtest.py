@@ -446,6 +446,10 @@ def test_costs_are_reported_even_with_no_equity_point():
     assert result.commission_paid == pytest.approx(float(result.fills["commission"][0]))
     assert result.tax_paid == 0
     assert result.slippage_paid == pytest.approx(float(result.fills["slippage"][0]) * 2)
+    # The caveats are read whether or not the curve has a point.
+    assert not result.multiple_instruments and not result.cost_totals_incomplete and result.expired_day_orders == 0
+    assert result.volume_ignored and result.bar_tape_unverified
+    assert result.sellable_is_whole_holding and result.buying_power_is_ledger_cash
 
 
 def test_a_target_the_runner_cannot_plan_is_rejected_with_the_library_reason():
@@ -493,6 +497,8 @@ def test_a_replay_finished_without_bars_has_empty_equity_text():
 
     result = pyatl.Replay(Nothing(), ["005930"]).finish()
     assert result.bars == 0 and result.opening_equity == "" and result.closing_equity == ""
+    assert result.volume_ignored and result.bar_tape_unverified
+    assert result.sellable_is_whole_holding and result.buying_power_is_ledger_cash
 
 
 def test_the_library_period_returns_are_what_its_sharpe_uses():
