@@ -32,7 +32,11 @@ def test_every_public_name_is_documented(name):
         # to attribute sections it does not render.
         assert "Attributes\n----------" in doc, name
     if name == "BacktestResult":
-        undocumented = [field.name for field in dataclasses.fields(pyatl.BacktestResult) if field.name not in doc]
+        # Each field needs its own `name : type` line (several names may share one), not a mention anywhere.
+        section = doc.split("Attributes\n----------\n", 1)[1]
+        headers = [line.split(" : ")[0] for line in section.splitlines() if " : " in line and not line.startswith(" ")]
+        entries = {entry.strip() for header in headers for entry in header.split(",")}
+        undocumented = [field.name for field in dataclasses.fields(pyatl.BacktestResult) if field.name not in entries]
         assert not undocumented, undocumented
 
 
