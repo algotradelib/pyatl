@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import numbers
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from decimal import Decimal
@@ -21,7 +22,7 @@ class BacktestResult:
     a table). Times are ns since the epoch (UTC). `halted` says why the replay stopped early, if it did; the
     figures then cover only what ran. Figures are NaN where the library has none. A result saved before a field
     existed loads with that field's default: None for a count or flag it did not report, True for the four constant
-    cautions (they held for every replay), NaN for `periods_per_year`.
+    cautions (they held for every replay), NaN for `periods_per_year`; it keeps the `annualized_sharpe` it saved.
 
     Attributes
     ----------
@@ -254,7 +255,11 @@ class Replay:
         settings.slippage_ticks = slippage_ticks
         settings.shorts = shorts
         settings.fill = fill
-        settings.periods_per_year = periods_per_year
+        if periods_per_year is not None:
+            # A bool is an int to Python and would pass as 1 or 0; the finite-and-above-0 check is the C++ side's.
+            if isinstance(periods_per_year, bool) or not isinstance(periods_per_year, numbers.Real):
+                raise TypeError(f"periods_per_year is a number or None, not {type(periods_per_year).__name__}")
+            settings.periods_per_year = float(periods_per_year)
         self._interval, self._stamp, self._scale = interval, stamp, scale
         self._core = _core.Replay(strategy, symbols, settings, interval, stamp)
         self._index = {symbol: i for i, symbol in enumerate(symbols)}
