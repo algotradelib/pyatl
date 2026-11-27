@@ -605,3 +605,15 @@ def test_the_report_flags_reach_python():
     assert huge.halted is None and len(huge.fills["time"]) == 3
     assert huge.cost_totals_incomplete
     assert math.isnan(huge.commission_paid) and math.isnan(huge.tax_paid) and math.isnan(huge.slippage_paid)
+
+
+def test_periods_per_year_are_counted_from_the_curve():
+    closes = [12000, 12500, 11800, 12300, 11900, 12600, 12100]
+    result = pyatl.backtest(TargetAt(on=0, off=5, quantity=100), {"005930": bars(closes)})
+    times = result.equity["time"]
+    years = (times[-1] - times[0]) / (365.25 * 86400e9)
+    assert result.periods_per_year == pytest.approx((len(times) - 1) / years)
+    assert result.periods_per_year == pytest.approx(365.25)  # one point every calendar day, not a fixed 245
+    assert (result.annualized_sharpe / result.sharpe) ** 2 == pytest.approx(result.periods_per_year)
+    one = pyatl.backtest(TargetAt(on=0, off=5), {"005930": bars([100])})
+    assert math.isnan(one.periods_per_year) and math.isnan(one.annualized_sharpe)
