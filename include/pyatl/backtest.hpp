@@ -41,6 +41,10 @@ struct Result {
   double lowest_cash{NAN};
   std::string market_price_rule;
   std::size_t market_fills_by_rule{0};
+  std::size_t expired_day_orders{0};
+  bool multiple_instruments{false}, cost_totals_incomplete{false};
+  bool volume_ignored{false}, bar_tape_unverified{false}, sellable_is_whole_holding{false};
+  bool buying_power_is_ledger_cash{false};
 };
 
 /** The library's market-price preset named by `Settings::fill`. */
@@ -129,6 +133,15 @@ Result result_of(const Engine& engine, atl::BarInterval interval) {
   out.commission_paid = to_double_or_nan(report.commission_paid_);
   out.tax_paid = to_double_or_nan(report.tax_paid_);
   out.slippage_paid = to_double_or_nan(report.slippage_paid_);
+  // The caveats pyatl's inputs can set, and the library's constant ones, which hold for every replay.
+  const auto& caveats = report.caveats_;
+  out.expired_day_orders = caveats.expired_day_orders_;
+  out.multiple_instruments = caveats.multiple_instruments_;
+  out.cost_totals_incomplete = caveats.cost_totals_incomplete_;
+  out.volume_ignored = atl::backtest::ReportCaveats::volume_ignored;
+  out.bar_tape_unverified = atl::backtest::ReportCaveats::bar_tape_unverified;
+  out.sellable_is_whole_holding = atl::backtest::ReportCaveats::sellable_is_whole_holding;
+  out.buying_power_is_ledger_cash = atl::backtest::ReportCaveats::buying_power_is_ledger_cash;
   if (!result.equity_.empty()) {
     out.opening_equity = report.opening_equity_.str();
     out.closing_equity = report.closing_equity_.str();

@@ -82,6 +82,29 @@ class BacktestResult:
         `fill`, empty under the default (the next bar's open).
     market_fills_by_rule : int
         Fills that rule priced; 0 under the default.
+    expired_day_orders : int
+        Orders withdrawn unfilled when their trading session ended, as a day order expires live: for example a
+        "decision-close" order whose symbol had no price yet and whose next daily bar has no open.
+    multiple_instruments : bool
+        Whether more than one symbol executed: the library's caution about survivorship bias. A universe chosen
+        from today's listings leaves out names delisted during the period, which flatters the result; the library
+        cannot see how the symbols were chosen, so a hand-picked list sets it too.
+    cost_totals_incomplete : bool
+        Whether some cost could not be summed exactly (amounts far beyond any real account, such as a huge
+        `min_commission`); `commission_paid`, `tax_paid` and `slippage_paid` are then NaN.
+    volume_ignored : bool
+        Always True: fills are never capped by traded volume, and queue position, market impact and borrowing are
+        not modelled, so a result says nothing about how much capital the strategy can take.
+    bar_tape_unverified : bool
+        Always True: bars carry no venue, so the replay cannot know which tape (KRX, NXT or consolidated) they
+        came from, and a live run's bars can differ.
+    sellable_is_whole_holding : bool
+        Always True: every share held counts as sellable; live, a broker can report fewer (unsettled, pledged or
+        locked shares) and refuse a sale the replay allowed.
+    buying_power_is_ledger_cash : bool
+        Always True: the replay's buying power is its own cash, with no settlement modelled, while a broker
+        computes buying power on its own terms. pyatl does not cap buys at that cash either: a buy may take cash
+        below zero, which `overdrawn_bars` and `lowest_cash` report.
     """
 
     bars: int
@@ -110,6 +133,13 @@ class BacktestResult:
     unchecked_fill_causality: int
     market_price_rule: str
     market_fills_by_rule: int
+    expired_day_orders: int
+    multiple_instruments: bool
+    cost_totals_incomplete: bool
+    volume_ignored: bool
+    bar_tape_unverified: bool
+    sellable_is_whole_holding: bool
+    buying_power_is_ledger_cash: bool
 
 
 class Replay:

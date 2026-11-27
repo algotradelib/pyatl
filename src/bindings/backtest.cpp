@@ -75,6 +75,13 @@ nb::dict to_dict(Result r) {
   d["lowest_cash"] = r.lowest_cash;
   d["market_price_rule"] = r.market_price_rule;
   d["market_fills_by_rule"] = r.market_fills_by_rule;
+  d["expired_day_orders"] = r.expired_day_orders;
+  d["multiple_instruments"] = r.multiple_instruments;
+  d["cost_totals_incomplete"] = r.cost_totals_incomplete;
+  d["volume_ignored"] = r.volume_ignored;
+  d["bar_tape_unverified"] = r.bar_tape_unverified;
+  d["sellable_is_whole_holding"] = r.sellable_is_whole_holding;
+  d["buying_power_is_ledger_cash"] = r.buying_power_is_ledger_cash;
   return d;
 }
 
